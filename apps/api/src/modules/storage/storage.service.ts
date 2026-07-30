@@ -67,6 +67,10 @@ export class StorageService {
 
   async resolveAbsolutePath(filePath: string): Promise<string> {
     const absolutePath = path.join(this.storageRoot, filePath);
+    // Prevent path traversal: ensure resolved path is still within storageRoot
+    if (!absolutePath.startsWith(this.storageRoot)) {
+      throw new Error("Invalid file path.");
+    }
     try {
       await fs.access(absolutePath);
     } catch {
@@ -77,6 +81,10 @@ export class StorageService {
 
   async deleteFile(filePath: string): Promise<void> {
     const absolutePath = path.join(this.storageRoot, filePath);
+    // Prevent path traversal
+    if (!absolutePath.startsWith(this.storageRoot)) {
+      return; // Silently reject for delete — same as "file not found"
+    }
     try {
       await fs.unlink(absolutePath);
     } catch {
