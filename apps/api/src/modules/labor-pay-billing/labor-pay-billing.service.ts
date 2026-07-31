@@ -629,6 +629,36 @@ export class LaborPayBillingService {
       orderBy: { scheduledStartUtc: "asc" }
     });
 
+    // Preload all rates to avoid N+1 in the loop
+    const employeeIds = [...new Set(shifts.map((s) => s.employeeId))];
+    const serviceClientIds = [...new Set(shifts.map((s) => s.serviceClientId))];
+
+    const [employeeRates, clientRates] = await Promise.all([
+      this.prisma.employeeRate.findMany({
+        where: { employeeId: { in: employeeIds } }
+      }),
+      this.prisma.clientLaborRate.findMany({
+        where: { serviceClientId: { in: serviceClientIds } }
+      })
+    ]);
+
+    const employeeRatesByEmployeeId = new Map<string, (typeof employeeRates)[number][]>();
+    for (const rate of employeeRates) {
+      const list = employeeRatesByEmployeeId.get(rate.employeeId) ?? [];
+      list.push(rate);
+      employeeRatesByEmployeeId.set(rate.employeeId, list);
+    }
+
+    const clientRatesByServiceClientId = new Map<string, (typeof clientRates)[number][]>();
+    for (const rate of clientRates) {
+      // serviceClientId is optional in the schema but the query only returns rates
+      // where serviceClientId matches a shift's serviceClientId (which is non-null)
+      const key = rate.serviceClientId!;
+      const list = clientRatesByServiceClientId.get(key) ?? [];
+      list.push(rate);
+      clientRatesByServiceClientId.set(key, list);
+    }
+
     const rows: ShiftLaborRow[] = [];
 
     for (const shift of shifts) {
@@ -648,10 +678,14 @@ export class LaborPayBillingService {
       }
 
       const rateAt = review.clockOutUtc ?? shift.scheduledEndUtc;
-      const [employeeRateMinor, clientRateMinor] = await Promise.all([
-        this.resolveEmployeeRateMinor(shift.employeeId, rateAt),
-        this.resolveClientRateMinor(shift.serviceClientId, rateAt)
-      ]);
+      const employeeRateMinor = this.pickEffectiveRateFromCache(
+        employeeRatesByEmployeeId.get(shift.employeeId) ?? [],
+        rateAt
+      ) ?? DEFAULT_EMPLOYEE_RATE_MINOR;
+      const clientRateMinor = this.pickEffectiveRateFromCache(
+        clientRatesByServiceClientId.get(shift.serviceClientId) ?? [],
+        rateAt
+      ) ?? DEFAULT_CLIENT_RATE_MINOR;
 
       const employeeAmountMinor = estimateAmountMinor(review.payableMinutes, employeeRateMinor) ?? 0;
       const clientAmountMinor = estimateAmountMinor(review.payableMinutes, clientRateMinor) ?? 0;
@@ -788,5 +822,23 @@ export class LaborPayBillingService {
     return active.reduce((latest, rate) =>
       rate.effectiveStart > latest.effectiveStart ? rate : latest
     );
+  }
+
+  private pickEffectiveRateFromCache(
+    rates: Array<{ rateMinorUnits: number; effectiveStart: Date; effectiveEnd: Date | null }>,
+    at: Date
+  ): number | null {
+    const active = rates.filter((rate) => {
+      const end = rate.effectiveEnd;
+      return rate.effectiveStart <= at && (!end || end > at);
+    });
+
+    if (active.length === 0) {
+      return null;
+    }
+
+    return active.reduce((latest, rate) =>
+      rate.effectiveStart > latest.effectiveStart ? rate : latest
+    )?.rateMinorUnits ?? null;
   }
 }
