@@ -57,18 +57,18 @@ function KpiCard({
   readonly badge?: string | null;
   readonly onClick?: () => void;
 }) {
-  const toneClasses = {
-    sales: "border-blue-200/80 bg-blue-50/40",
-    collected: "border-emerald-200/80 bg-emerald-50/40",
-    outstanding: "border-amber-200/80 bg-amber-50/40",
-    overdue: "border-red-200/80 bg-red-50/40"
+  const toneBorderClasses = {
+    sales: "border-blue-200/80",
+    collected: "border-emerald-200/80",
+    outstanding: "border-amber-200/80",
+    overdue: "border-red-200/80"
   } as const;
 
   const valueClasses = {
-    sales: "text-blue-700",
-    collected: "text-emerald-700",
-    outstanding: "text-amber-800",
-    overdue: "text-red-700"
+    sales: "text-[#2563eb]",
+    collected: "text-[#059669]",
+    outstanding: "text-[#b45309]",
+    overdue: "text-[#dc2626]"
   } as const;
 
   const content = (
@@ -92,7 +92,7 @@ function KpiCard({
     </>
   );
 
-  const className = `rounded-xl border p-5 text-left ${toneClasses[tone]} ${
+  const className = `stitch-card ${toneBorderClasses[tone]} text-left ${
     onClick ? "cursor-pointer transition hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500" : ""
   }`;
 
@@ -459,7 +459,7 @@ export function FinancialDashboardSection({
             />
           </div>
 
-          <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/20">
+          <div className="stitch-card">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-semibold text-on-surface">Sales vs collections</h3>
@@ -475,7 +475,7 @@ export function FinancialDashboardSection({
           </div>
 
           <div className="grid gap-5 lg:grid-cols-2">
-            <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/20">
+            <div className="stitch-card">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold text-on-surface">Top debtors</h3>
                 <Link href="/client-invoices?status=ISSUED" className="text-xs font-medium text-primary hover:underline">
@@ -513,7 +513,7 @@ export function FinancialDashboardSection({
               )}
             </div>
 
-            <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/20">
+            <div className="stitch-card">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold text-on-surface">Recent payments</h3>
                 <Link href="/reports" className="text-xs font-medium text-primary hover:underline">

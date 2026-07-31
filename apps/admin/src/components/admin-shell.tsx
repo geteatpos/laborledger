@@ -13,24 +13,24 @@ export function AdminShell({ title, description, actions, children }: AdminShell
   return (
     <div className="min-h-screen bg-page text-on-surface">
       <div className="mx-auto flex min-h-screen max-w-[100rem]">
-        <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-outline-variant bg-white p-6 md:flex">
+        <aside className="fixed inset-y-0 left-0 z-40 hidden w-[280px] flex-col border-r border-[#e5e7eb] bg-white p-6 md:flex">
           <div className="mb-8">
-            <h2 className="font-display text-[24px] font-bold tracking-tight text-primary">
+            <h2 className="font-display text-[24px] font-bold tracking-tight text-[#004ac6]">
               Precision Auto
             </h2>
-            <p className="mt-1 text-[12px] font-medium uppercase tracking-widest text-on-surface-variant/60">
+            <p className="mt-1 text-[12px] font-medium uppercase tracking-widest text-[#434655]/60">
               Shop Manager
             </p>
           </div>
 
           <AdminNav variant="sidebar" />
 
-          <div className="mt-auto rounded-lg border border-outline-variant bg-page px-3 py-2.5 text-[12px] text-on-surface-variant">
+          <div className="mt-auto rounded-lg border border-[#e5e7eb] bg-[#f8fafb] px-3 py-2.5 text-[12px] text-[#434655]">
             Workforce & billing operations
           </div>
         </aside>
 
-        <div className="flex min-h-screen w-full flex-1 flex-col md:pl-64">
+        <div className="flex min-h-screen w-full flex-1 flex-col md:pl-[280px]">
           <header className="stitch-page-header">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0 space-y-1">

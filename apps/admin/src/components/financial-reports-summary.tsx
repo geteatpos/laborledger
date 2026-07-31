@@ -59,7 +59,7 @@ export function FinancialReportsSummary({ summary }: FinancialReportsSummaryProp
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => (
-          <article key={card.key} className={`rounded-xl border p-4 ${card.className}`}>
+          <article key={card.key} className={`stitch-card p-4 ${card.className}`}>
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{card.label}</p>
             <p className={`mt-2 text-2xl font-semibold ${card.valueClassName}`}>
               {formatFinancialMoney(card.amount, currency)}

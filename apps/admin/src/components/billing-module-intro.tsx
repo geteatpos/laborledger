@@ -7,7 +7,7 @@ type BillingModuleIntroProps = {
 
 export function BillingModuleIntro({ children, help }: BillingModuleIntroProps) {
   return (
-    <div className="mb-6 rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/20">
+    <div className="mb-6 stitch-card p-4">
       <p className="text-sm leading-relaxed text-slate-600">{children}</p>
       {help ? (
         <p className="mt-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-500">

@@ -10,7 +10,7 @@ import { EmployeeStatusBadge } from "./employee-status-badge";
 import { MaterialIcon } from "./ui/material-icon";
 import { RegeneratePinForm } from "./regenerate-pin-form";
 import { SetEmployeeRateForm } from "./set-employee-rate-form";
-import type { EmployeeRateRecord, EmployeeRecord } from "../lib/employee-utils";
+import type { EmployeeRateRecord, EmployeeProfile } from "../lib/employee-utils";
 import {
   DEFAULT_HOURLY_RATE_USD,
   formatEmployeeDate,
@@ -19,7 +19,7 @@ import {
 } from "../lib/employee-utils";
 
 type EmployeeDetailDrawerProps = {
-  readonly employee: EmployeeRecord | null;
+  readonly employee: EmployeeProfile | null;
   readonly companyId: string;
   readonly companyName: string;
   readonly onClose: () => void;

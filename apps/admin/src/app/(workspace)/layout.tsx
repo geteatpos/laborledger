@@ -35,10 +35,10 @@ export default async function WorkspaceLayout({ children }: WorkspaceLayoutProps
 
   return (
     <div className="min-h-screen bg-surface">
-      <div className="md:pl-64">
+      <div className="md:pl-[280px]">
         <AdminSessionBar session={session} />
       </div>
-      <div className="border-b border-outline-variant/10 bg-surface-container-low-40 px-4 py-3 md:ml-64 md:hidden">
+      <div className="border-b border-outline-variant/10 bg-surface-container-low-40 px-4 py-3 md:ml-[280px] md:hidden">
         <AdminNav variant="mobile" />
       </div>
       {children}

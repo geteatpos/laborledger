@@ -187,11 +187,33 @@ export function employeeStatusLabel(archivedAt: string | null) {
   return archivedAt ? "Inactive" : "Active";
 }
 
-export function filterEmployeesByQuery(employees: EmployeeRecord[], query: string) {
+export function filterEmployeesByQuery(employees: EmployeeRecord[], query: string): EmployeeRecord[] {
   const normalized = query.trim().toLowerCase();
   if (!normalized) {
     return employees;
   }
 
   return employees.filter((employee) => employee.fullName.toLowerCase().includes(normalized));
+}
+
+export function filterEmployeesByQueryProfile(employees: EmployeeProfile[], query: string): EmployeeProfile[] {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) {
+    return employees;
+  }
+
+  return employees.filter((employee) => employee.fullName.toLowerCase().includes(normalized));
+}
+
+export function employeePhotoSrc(companyId: string, employeeId: string, photoUrl: string | null | undefined): string | null {
+  if (photoUrl) {
+    return photoUrl;
+  }
+  return `/api/employees/${employeeId}/photo`;
+}
+
+export function formatEmployeeCode(employeeId: string): string {
+  // Generate a short employee code from the ID (last 6 characters, uppercased)
+  const shortId = employeeId.slice(-6).toUpperCase();
+  return `EMP-${shortId}`;
 }

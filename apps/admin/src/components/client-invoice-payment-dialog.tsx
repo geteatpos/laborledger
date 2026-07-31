@@ -102,12 +102,12 @@ export function MarkAsPaidDialog({ invoice, onPaid }: MarkAsPaidDialogProps) {
           <button
             type="button"
             aria-label="Cerrar diálogo"
-            className="fixed inset-0 z-40 bg-on-surface/35 backdrop-blur-[1px]"
+            className="stitch-modal-overlay"
             onClick={closeDialog}
           />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div
-              className="w-full max-w-md overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest shadow-[0_20px_48px_rgba(11,28,48,0.22)]"
+              className="stitch-modal w-full max-w-md"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between border-b border-outline-variant bg-surface-container-low px-5 py-3">

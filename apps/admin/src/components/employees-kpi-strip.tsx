@@ -1,28 +1,28 @@
 type EmployeesKpiStripProps = {
+  readonly totalEmployees: number;
   readonly activeEmployees: number;
   readonly supervisors: number;
-  readonly pendingInvites: number;
-  readonly locations: number;
+  readonly inactiveEmployees: number;
 };
 
 const KPI_ITEMS = [
+  { key: "totalEmployees", label: "Total employees" },
   { key: "activeEmployees", label: "Active employees" },
   { key: "supervisors", label: "Supervisors" },
-  { key: "pendingInvites", label: "Pending invites" },
-  { key: "locations", label: "Locations" }
+  { key: "inactiveEmployees", label: "Inactive employees" }
 ] as const;
 
 export function EmployeesKpiStrip({
+  totalEmployees,
   activeEmployees,
   supervisors,
-  pendingInvites,
-  locations
+  inactiveEmployees
 }: EmployeesKpiStripProps) {
   const values = {
+    totalEmployees,
     activeEmployees,
     supervisors,
-    pendingInvites,
-    locations
+    inactiveEmployees
   };
 
   return (

@@ -205,7 +205,7 @@ export function CreateClientInvoiceForm({ company, serviceClients }: CreateClien
 
   if (!isOpen) {
     return (
-      <button type="button" onClick={() => setIsOpen(true)} className="stitch-btn-accent">
+      <button type="button" onClick={() => setIsOpen(true)} className="stitch-btn-primary">
         Create draft invoice
       </button>
     );

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { AdminShell } from "../../../components/admin-shell";
+import { DashboardMetricCard } from "../../../components/dashboard-metric-card";
 import { EmployeesModuleIntro } from "../../../components/employees-module-intro";
 import { ReceptionSectionNav } from "../../../components/reception-section-nav";
 import { ServiceClientsWorkspace } from "../../../components/service-clients-workspace";
@@ -22,6 +23,21 @@ import {
   loadWorkspaceContext,
   WorkspaceApiError
 } from "../../../lib/workspace-auth";
+
+function isWithinLast30Days(dateString: string): boolean {
+  const date = new Date(dateString);
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  return date >= thirtyDaysAgo;
+}
+
+function computeCustomerStats(clients: ServiceClientListRecord[]) {
+  const total = clients.length;
+  const active = clients.filter((c) => !c.archivedAt).length;
+  const newLeads = clients.filter((c) => isWithinLast30Days(c.createdAt)).length;
+  const retentionRate = total > 0 ? ((active / total) * 100).toFixed(1) : "0.0";
+  return { total, active, newLeads, retentionRate };
+}
 
 type ServiceClientsPageProps = {
   readonly searchParams?: Promise<{
@@ -83,13 +99,14 @@ export default async function ServiceClientsPage({ searchParams }: ServiceClient
           : serviceClients;
 
     const clientViews = enrichServiceClientsWithLocationCounts(visibleClients, locations);
+    const stats = computeCustomerStats(serviceClients);
 
     return (
       <AdminShell
         title={CUSTOMERS_MODULE_TITLE}
         description={CUSTOMERS_MODULE_DESCRIPTION}
         actions={
-          <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700">
+          <span className="stitch-card px-3 py-1.5 text-sm font-medium text-on-surface">
             {clientViews.length} {clientViews.length === 1 ? "customer" : "customers"}
           </span>
         }
@@ -98,6 +115,18 @@ export default async function ServiceClientsPage({ searchParams }: ServiceClient
         <EmployeesModuleIntro help={CUSTOMERS_RELATIONSHIP_COPY}>
           {CUSTOMERS_MODULE_DESCRIPTION}
         </EmployeesModuleIntro>
+
+        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <DashboardMetricCard label="Total Customers" value={String(stats.total)} />
+          <DashboardMetricCard
+            label="Active this month"
+            value={String(stats.active)}
+            tone="accent"
+          />
+          <DashboardMetricCard label="New Leads" value={String(stats.newLeads)} tone="accent" />
+          <DashboardMetricCard label="Retention Rate" value={`${stats.retentionRate}%`} />
+        </div>
+
         <ServiceClientsWorkspace
           companies={companies}
           selectedCompany={selectedCompany}

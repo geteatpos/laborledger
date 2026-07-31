@@ -14,9 +14,14 @@ import {
 type CreateEmployeeFormProps = {
   readonly companyId: string;
   readonly onCreated?: () => void;
+  readonly triggerLabel?: string;
 };
 
-export function CreateEmployeeForm({ companyId, onCreated }: CreateEmployeeFormProps) {
+export function CreateEmployeeForm({
+  companyId,
+  onCreated,
+  triggerLabel = "Nuevo Empleado"
+}: CreateEmployeeFormProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [fullName, setFullName] = useState("");
@@ -122,9 +127,12 @@ export function CreateEmployeeForm({ companyId, onCreated }: CreateEmployeeFormP
       <button
         type="button"
         onClick={handleToggle}
-        className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
+        className="stitch-btn-primary"
       >
-        {isOpen ? "Cancel" : "Add employee"}
+        <span className="material-symbols-outlined text-[20px]" aria-hidden>
+          {isOpen ? "close" : "person_add"}
+        </span>
+        {isOpen ? "Cancelar" : triggerLabel}
       </button>
 
       {successMessage ? (
@@ -139,11 +147,11 @@ export function CreateEmployeeForm({ companyId, onCreated }: CreateEmployeeFormP
       {isOpen ? (
         <form
           onSubmit={handleSubmit}
-          className="mt-4 rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/30"
+          className="mt-4 rounded-xl border border-outline-variant bg-white p-5 shadow-subtle"
         >
-          <h2 className="text-sm font-semibold text-slate-900">New employee</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Add someone to this company. Default pay rate is USD {DEFAULT_HOURLY_RATE_USD}/hour.
+          <h2 className="text-sm font-semibold text-on-surface">Nuevo empleado</h2>
+          <p className="mt-1 text-sm text-secondary">
+            Añade a alguien a esta empresa. La tarifa por defecto es USD {DEFAULT_HOURLY_RATE_USD}/hora.
           </p>
 
           <div className="mt-6 space-y-6">
@@ -216,7 +224,7 @@ export function CreateEmployeeForm({ companyId, onCreated }: CreateEmployeeFormP
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+              className="stitch-btn-primary"
             >
               {isSubmitting ? "Creating…" : "Create employee"}
             </button>
@@ -224,7 +232,7 @@ export function CreateEmployeeForm({ companyId, onCreated }: CreateEmployeeFormP
               type="button"
               onClick={handleToggle}
               disabled={isSubmitting}
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed"
+              className="stitch-btn-secondary"
             >
               Cancel
             </button>

@@ -7,16 +7,16 @@ type ClientInvoiceStatusBadgeProps = {
 
 const STATUS_STYLES: Record<ClientInvoiceStatus, { className: string; label: string }> = {
   DRAFT: {
-    className: "stitch-badge-neutral",
-    label: "Borrador"
+    className: "stitch-badge-warning",
+    label: "Pendiente"
   },
   ISSUED: {
-    className: "stitch-badge-info",
-    label: "Emitida"
+    className: "stitch-badge-success",
+    label: "Pagada"
   },
   VOID: {
     className: "stitch-badge-danger",
-    label: "Anulada"
+    label: "Vencida"
   }
 };
 

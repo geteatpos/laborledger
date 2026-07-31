@@ -35,7 +35,9 @@ export const companyAdminNavSections: readonly AdminNavSection[] = [
       { href: "/jobs", label: "Trabajos activos" },
       { href: "/work-orders", label: "Órdenes de trabajo" },
       { href: "/service-catalog", label: "Catálogo de servicios" },
+      { href: "/attendance", label: "Control de Asistencia" },
       { href: "/kiosks", label: "Relojes / Kioskos" },
+      { href: "/mobile-devices", label: "Dispositivos móviles" },
       { href: "/scheduling", label: "Tarjetas de tiempo" },
       { href: "/review", label: "Aprobaciones" },
       { href: "/corrections", label: "Correcciones" },
@@ -80,6 +82,7 @@ export const jobsSectionNavItems: readonly AdminNavItem[] = [
 ] as const;
 
 export const timeSectionNavItems: readonly AdminNavItem[] = [
+  { href: "/attendance", label: "Control de Asistencia" },
   { href: "/kiosks", label: "Relojes / Kioskos" },
   { href: "/mobile-devices", label: "Dispositivos móviles" },
   { href: "/scheduling", label: "Tarjetas de tiempo" },
@@ -146,6 +149,7 @@ const NAV_ICONS: Record<string, string> = {
   reception: "garage",
   jobs: "handyman",
   billing: "payments",
+  "/attendance": "how_to_reg",
   "/kiosks": "sensors",
   "/mobile-devices": "smartphone",
   "/scheduling": "calendar_month",

@@ -43,17 +43,17 @@ const QUICK_ACTIONS = [
 
 export function DashboardQuickActions() {
   return (
-    <section className="glass-panel rounded-stitch p-6">
+    <section className="stitch-card p-6">
       <h2 className="stitch-section-title text-body-md">Quick actions</h2>
       <p className="mt-1 text-body-sm text-on-surface-variant">Jump to common operational workflows.</p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {QUICK_ACTIONS.map((action) => (
-          <Link
-            key={action.href}
-            href={action.href}
-            className="glass-card-interactive group flex gap-3 rounded-lg px-4 py-3"
-          >
+            <Link
+              key={action.href}
+              href={action.href}
+              className="stitch-card-interactive group flex gap-3 rounded-lg px-4 py-3"
+            >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-container-20 text-primary">
               <MaterialIcon name={action.icon} />
             </span>

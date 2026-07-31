@@ -5,25 +5,28 @@ import { useMemo, useState } from "react";
 
 import { CreateEmployeeForm } from "./create-employee-form";
 import { EditEmployeeForm } from "./edit-employee-form";
-import { EmployeeAccessBadge } from "./employee-access-badge";
 import { EmployeeDetailDrawer } from "./employee-detail-drawer";
 import { EmployeeStatusBadge } from "./employee-status-badge";
 import { EmptyState } from "./empty-state";
-import type { CompanyRecord, EmployeeRecord } from "../lib/employee-utils";
+import { MaterialIcon } from "./ui/material-icon";
+import type { CompanyRecord, EmployeeProfile } from "../lib/employee-utils";
 import {
   EMPLOYEES_TEAM_EMPTY_DESCRIPTION,
-  EMPLOYEES_TEAM_EMPTY_TITLE
+  EMPLOYEES_TEAM_EMPTY_TITLE,
+  EMPLOYEES_TEAM_INTRO
 } from "../lib/employees-module-copy";
 import {
   employeeInitials,
-  filterEmployeesByQuery,
+  employeePhotoSrc,
+  filterEmployeesByQueryProfile,
+  formatEmployeeCode,
   formatEmployeeDate
 } from "../lib/employee-utils";
 
 type EmployeesWorkspaceProps = {
   readonly companies: CompanyRecord[];
   readonly selectedCompany: CompanyRecord;
-  readonly employees: EmployeeRecord[];
+  readonly employees: EmployeeProfile[];
   readonly initialQuery: string;
   readonly initialStatus: "active" | "inactive" | "all";
 };
@@ -38,7 +41,7 @@ export function EmployeesWorkspace({
   const [query, setQuery] = useState(initialQuery);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
 
-  const filteredEmployees = useMemo(() => filterEmployeesByQuery(employees, query), [employees, query]);
+  const filteredEmployees = useMemo(() => filterEmployeesByQueryProfile(employees, query), [employees, query]);
 
   const selectedEmployee =
     filteredEmployees.find((employee) => employee.id === selectedEmployeeId) ??
@@ -64,20 +67,17 @@ export function EmployeesWorkspace({
 
   return (
     <>
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="stitch-section-title text-body-sm">Equipo</h2>
-          <p className="mt-1 text-body-sm text-on-surface-variant">
-            {filteredEmployees.length} {filteredEmployees.length === 1 ? "empleado" : "empleados"}
-            {initialStatus !== "active" ? ` · filtro ${initialStatus}` : ""}
-          </p>
+          <h3 className="text-lg font-semibold leading-7 text-on-surface">Plantilla de Personal</h3>
+          <p className="mt-1 text-body-sm text-secondary">{EMPLOYEES_TEAM_INTRO}</p>
         </div>
         <CreateEmployeeForm companyId={selectedCompany.id} />
       </div>
 
       {companies.length > 1 ? (
-        <div className="mb-6 stitch-filter-panel">
-          <p className="stitch-label mb-2.5">Empresa</p>
+        <div className="mb-6 rounded-xl border border-outline-variant bg-white p-4 shadow-subtle">
+          <p className="mb-2.5 text-label-sm uppercase tracking-wider text-secondary">Empresa</p>
           <div className="flex flex-wrap gap-2">
             {companies.map((company) => {
               const isSelected = company.id === selectedCompany.id;
@@ -95,41 +95,6 @@ export function EmployeesWorkspace({
         </div>
       ) : null}
 
-      <div className="mb-4 stitch-filter-panel sm:flex-row sm:items-end sm:justify-between flex flex-col gap-3">
-        <div className="flex-1">
-          <label className="stitch-label mb-2 block" htmlFor="employee-search">
-            Buscar
-          </label>
-          <input
-            id="employee-search"
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar por nombre…"
-            className="stitch-input max-w-md"
-          />
-        </div>
-
-        <div>
-          <p className="stitch-label mb-2">Estado</p>
-          <div className="flex flex-wrap gap-2">
-            {(["active", "inactive", "all"] as const).map((status) => {
-              const isSelected = initialStatus === status;
-              const label = status === "active" ? "Activos" : status === "inactive" ? "Inactivos" : "Todos";
-              return (
-                <Link
-                  key={status}
-                  href={buildEmployeesHref({ status })}
-                  className={isSelected ? "stitch-chip-active" : "stitch-chip-inactive"}
-                >
-                  {label}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
       {filteredEmployees.length === 0 ? (
         employees.length === 0 ? (
           <EmptyState
@@ -144,106 +109,204 @@ export function EmployeesWorkspace({
           />
         )
       ) : (
-        <>
+        <div className="flex flex-col overflow-hidden rounded-xl border border-outline-variant bg-white shadow-subtle">
+          <div className="flex flex-col items-center justify-between gap-4 border-b border-outline-variant bg-white p-4 sm:flex-row">
+            <div className="flex w-full items-center gap-2 overflow-x-auto sm:w-auto">
+              {(["all", "active", "inactive"] as const).map((status) => {
+                const isSelected =
+                  status === "all" ? initialStatus === "all" : initialStatus === status;
+                const label =
+                  status === "all" ? "Todos" : status === "active" ? "Activos" : "Inactivos";
+
+                return (
+                  <Link
+                    key={status}
+                    href={buildEmployeesHref({ status })}
+                    className={`whitespace-nowrap rounded-lg border px-3 py-1.5 text-label-sm font-medium transition-colors ${
+                      isSelected
+                        ? "border-outline-variant bg-surface-container-low text-on-surface"
+                        : "border-dashed border-outline-variant bg-white text-secondary hover:bg-surface-variant"
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div className="relative w-full sm:w-64">
+              <MaterialIcon
+                name="search"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-secondary"
+              />
+              <input
+                id="employee-search"
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar por nombre o puesto..."
+                className="stitch-input w-full pl-9 pr-3"
+              />
+            </div>
+          </div>
+
           <div className="stitch-table-wrap hidden md:block">
-            <div className="overflow-x-auto">
-              <table className="stitch-table">
-                <thead>
-                  <tr>
-                    <th>Nombre</th>
-                    <th>Acceso</th>
-                    <th>Tarifa</th>
-                    <th>Estado</th>
-                    <th>Alta</th>
-                    <th className="text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredEmployees.map((employee) => (
-                    <tr key={employee.id}>
-                      <td>
+            <table className="stitch-table w-full text-left">
+              <thead>
+                <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB]">
+                  <th className="w-1/3 px-4 py-3 text-label-sm font-bold uppercase tracking-wider text-[#111827]">
+                    Empleado
+                  </th>
+                  <th className="px-4 py-3 text-label-sm font-bold uppercase tracking-wider text-[#111827]">
+                    Puesto
+                  </th>
+                  <th className="px-4 py-3 text-center text-label-sm font-bold uppercase tracking-wider text-[#111827]">
+                    Estado
+                  </th>
+                  <th className="px-4 py-3 text-right text-label-sm font-bold uppercase tracking-wider text-[#111827]">
+                    Alta
+                  </th>
+                  <th className="px-4 py-3 text-right text-label-sm font-bold uppercase tracking-wider text-[#111827]">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E5E7EB]">
+                {filteredEmployees.map((employee) => {
+                  const photoSrc = employeePhotoSrc(
+                    selectedCompany.id,
+                    employee.id,
+                    employee.photoUrl
+                  );
+
+                  return (
+                    <tr
+                      key={employee.id}
+                      className="transition-colors duration-150 hover:[&>td]:bg-[#f3f4f5]"
+                    >
+                      <td className="px-4 py-3">
                         <button
                           type="button"
                           onClick={() => setSelectedEmployeeId(employee.id)}
                           className="flex w-full items-center gap-3 text-left"
                         >
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-outline-variant-30 bg-surface-container-low text-[11px] font-medium text-on-surface-variant">
-                            {employeeInitials(employee.fullName)}
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-outline-variant bg-surface-variant text-[11px] font-medium text-on-surface-variant">
+                            {photoSrc ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={photoSrc}
+                                alt=""
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              employeeInitials(employee.fullName)
+                            )}
                           </div>
-                          <span className="font-medium text-on-surface hover:text-primary">{employee.fullName}</span>
+                          <div>
+                            <p className="text-body-sm font-medium text-on-surface">{employee.fullName}</p>
+                            <p className="text-label-sm text-secondary">
+                              {formatEmployeeCode(employee.id)}
+                            </p>
+                          </div>
                         </button>
                       </td>
-                      <td>
-                        <EmployeeAccessBadge />
-                        <p className="mt-1 text-xs text-on-surface-variant">Field PIN</p>
+                      <td className="px-4 py-3">
+                        <p className="text-body-sm text-on-surface">{employee.title?.trim() || "Sin puesto"}</p>
+                        <p className="text-label-sm text-secondary">
+                          {employee.department?.trim() || "Sin departamento"}
+                        </p>
                       </td>
-                      <td className="text-on-surface-variant">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedEmployeeId(employee.id)}
-                          className="text-sm text-primary hover:brightness-110"
-                        >
-                          View pay rate
-                        </button>
-                      </td>
-                      <td>
+                      <td className="px-4 py-3 text-center">
                         <EmployeeStatusBadge archivedAt={employee.archivedAt} />
                       </td>
-                      <td className="text-on-surface-variant">{formatEmployeeDate(employee.createdAt)}</td>
-                      <td className="text-right">
-                        <div className="flex flex-wrap items-center justify-end gap-2">
+                      <td className="px-4 py-3 text-right text-body-sm text-on-surface-variant">
+                        {formatEmployeeDate(employee.createdAt)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"
                             onClick={() => setSelectedEmployeeId(employee.id)}
-                            className="stitch-btn-secondary px-3 py-1.5 text-xs"
+                            title="Ver perfil"
+                            className="rounded-md p-1.5 text-secondary transition-colors hover:bg-surface-variant hover:text-primary"
                           >
-                            Ver
+                            <MaterialIcon name="visibility" className="text-[20px]" />
                           </button>
-                          <EditEmployeeForm employeeId={employee.id} initialFullName={employee.fullName} />
+                          <button
+                            type="button"
+                            onClick={() => setSelectedEmployeeId(employee.id)}
+                            title="Editar"
+                            className="rounded-md p-1.5 text-secondary transition-colors hover:bg-surface-variant hover:text-primary"
+                          >
+                            <MaterialIcon name="edit" className="text-[20px]" />
+                          </button>
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
 
-          <div className="space-y-3 md:hidden">
-            {filteredEmployees.map((employee) => (
-              <article
-                key={employee.id}
-                className="stitch-card rounded-stitch p-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full border border-outline-variant-30 bg-surface-container-low text-xs font-medium text-on-surface-variant">
-                      {employeeInitials(employee.fullName)}
-                    </div>
-                    <div>
-                      <p className="font-medium text-on-surface">{employee.fullName}</p>
-                      <div className="mt-1 flex flex-wrap items-center gap-2">
-                        <EmployeeAccessBadge />
-                        <p className="text-xs text-on-surface-variant">{formatEmployeeDate(employee.createdAt)}</p>
+          <div className="space-y-3 p-4 md:hidden">
+            {filteredEmployees.map((employee) => {
+              const photoSrc = employeePhotoSrc(
+                selectedCompany.id,
+                employee.id,
+                employee.photoUrl
+              );
+
+              return (
+                <article
+                  key={employee.id}
+                  className="rounded-xl border border-outline-variant bg-white p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedEmployeeId(employee.id)}
+                      className="flex items-center gap-3 text-left"
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-outline-variant bg-surface-variant text-xs font-medium text-on-surface-variant">
+                        {photoSrc ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={photoSrc} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          employeeInitials(employee.fullName)
+                        )}
                       </div>
-                    </div>
+                      <div>
+                        <p className="font-medium text-on-surface">{employee.fullName}</p>
+                        <p className="text-label-sm text-secondary">
+                          {employee.title?.trim() || "Sin puesto"}
+                        </p>
+                      </div>
+                    </button>
+                    <EmployeeStatusBadge archivedAt={employee.archivedAt} />
                   </div>
-                  <EmployeeStatusBadge archivedAt={employee.archivedAt} />
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedEmployeeId(employee.id)}
-                    className="stitch-btn-secondary px-3 py-1.5 text-xs"
-                  >
-                    View details
-                  </button>
-                  <EditEmployeeForm employeeId={employee.id} initialFullName={employee.fullName} />
-                </div>
-              </article>
-            ))}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedEmployeeId(employee.id)}
+                      className="stitch-btn-secondary px-3 py-1.5 text-xs"
+                    >
+                      Ver perfil
+                    </button>
+                    <EditEmployeeForm employeeId={employee.id} initialFullName={employee.fullName} />
+                  </div>
+                </article>
+              );
+            })}
           </div>
-        </>
+
+          <div className="flex items-center justify-between border-t border-outline-variant bg-white p-4">
+            <span className="text-label-sm text-secondary">
+              Mostrando {filteredEmployees.length} de {employees.length} empleados
+              {initialStatus !== "all" ? ` · filtro ${initialStatus === "active" ? "activos" : "inactivos"}` : ""}
+            </span>
+          </div>
+        </div>
       )}
 
       <EmployeeDetailDrawer

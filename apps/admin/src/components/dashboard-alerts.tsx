@@ -21,7 +21,7 @@ const SEVERITY_BADGES = {
 export function DashboardAlerts({ alerts }: DashboardAlertsProps) {
   if (alerts.length === 0) {
     return (
-      <section className="glass-panel rounded-stitch p-6">
+      <section className="stitch-card p-6">
         <h2 className="stitch-section-title text-body-md">Operational alerts</h2>
         <p className="mt-2 text-body-sm leading-relaxed text-on-surface-variant">
           No active alerts. Operations look clear for your current scope.
@@ -31,7 +31,7 @@ export function DashboardAlerts({ alerts }: DashboardAlertsProps) {
   }
 
   return (
-    <section className="glass-panel rounded-stitch p-6">
+    <section className="stitch-card p-6">
       <div className="flex items-center justify-between gap-3">
         <h2 className="stitch-section-title text-body-md">Operational alerts</h2>
         <span className="rounded-full bg-surface-variant px-2.5 py-0.5 text-xs font-medium text-on-surface-variant">

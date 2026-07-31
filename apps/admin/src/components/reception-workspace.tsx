@@ -382,19 +382,19 @@ export function ReceptionWorkspace({
 
   if (step === "search") {
     return (
-      <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/30">
+      <div className="stitch-card">
         <ReceptionStepIndicator currentStep={step} />
 
         <div className="space-y-3">
           <p className="rounded-lg border border-brand-200 bg-brand-50/50 px-3.5 py-2.5 text-sm font-medium text-brand-900">
             {RECEPTION_SEARCH_BEFORE_CREATE}
           </p>
-          <p className="text-sm leading-relaxed text-slate-600">{RECEPTION_HELPER_COPY}</p>
+          <p className="text-sm leading-relaxed text-on-surface-variant">{RECEPTION_HELPER_COPY}</p>
           <WorkflowModelCallout>{WORK_ORDER_MODEL_CALLOUT}</WorkflowModelCallout>
         </div>
 
         <div className="mt-6">
-          <label className="block text-sm font-medium text-slate-700" htmlFor="reception-search">
+          <label className="stitch-label mb-1.5 block" htmlFor="reception-search">
             Search vehicle or customer
           </label>
           <input
@@ -408,13 +408,13 @@ export function ReceptionWorkspace({
                 void performSearch(searchQuery);
               }
             }}
-            className="mt-1.5 w-full rounded-lg border border-slate-200 px-3.5 py-2.5 font-mono uppercase text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+            className="stitch-input font-mono uppercase"
             placeholder="VIN, plate, phone, or customer name"
             autoComplete="off"
           />
         </div>
 
-        {isSearching ? <p className="mt-3 text-sm text-slate-500">Searching…</p> : null}
+        {isSearching ? <p className="mt-3 text-sm text-on-surface-variant">Searching…</p> : null}
 
         {searchError ? (
           <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -424,12 +424,12 @@ export function ReceptionWorkspace({
 
         {!isSearching && searchQuery.trim() && searchResults.length === 0 && !searchError ? (
           <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50/80 px-5 py-8 text-center">
-            <p className="text-sm font-semibold text-slate-900">{RECEPTION_NO_MATCH_TITLE}</p>
-            <p className="mt-2 text-sm text-slate-600">{RECEPTION_NO_MATCH_COPY}</p>
+            <p className="text-sm font-semibold text-on-surface">{RECEPTION_NO_MATCH_TITLE}</p>
+            <p className="mt-2 text-sm text-on-surface-variant">{RECEPTION_NO_MATCH_COPY}</p>
             <button
               type="button"
               onClick={handleCreateNew}
-              className="mt-4 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
+              className="stitch-btn-primary mt-4"
             >
               {RECEPTION_CREATE_NEW_VEHICLE_CTA}
             </button>
@@ -438,7 +438,7 @@ export function ReceptionWorkspace({
 
         {searchResults.length > 0 ? (
           <div className="mt-6 space-y-3">
-            <p className="text-sm font-medium text-slate-700">
+            <p className="text-sm font-medium text-on-surface">
               {searchResults.length} match{searchResults.length !== 1 ? "es" : ""} found
             </p>
             {searchResults.map((result) => (
@@ -453,20 +453,20 @@ export function ReceptionWorkspace({
                     <span className="inline-flex rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
                       {RECEPTION_VEHICLE_FOUND_LABEL}
                     </span>
-                    <p className="mt-2 text-sm font-semibold text-slate-900">
+                    <p className="mt-2 text-sm font-semibold text-on-surface">
                       {formatReceptionVehicleTitle(result.vehicle)}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-on-surface-variant">
                       VIN: {result.vehicle.vin}
                       {result.vehicle.plate ? ` · Plate: ${result.vehicle.plate}` : ""}
                     </p>
-                    <p className="mt-1 text-xs text-slate-600">
+                    <p className="mt-1 text-xs text-on-surface-variant">
                       Customer: {result.vehicle.serviceClient.name}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-on-surface-variant">
                       Last visit: {formatReceptionLastVisit(result.vehicle.workOrders)}
                     </p>
-                    <p className="mt-1 text-xs text-slate-400">
+                    <p className="mt-1 text-xs text-on-surface-variant">
                       Location: {result.vehicle.location.name}
                     </p>
                   </div>
@@ -489,7 +489,7 @@ export function ReceptionWorkspace({
         ) : null}
 
         <div className="mt-6">
-          <Link href="/jobs" className="text-sm font-medium text-slate-500 hover:text-slate-700">
+          <Link href="/jobs" className="text-sm font-medium text-on-surface-variant hover:text-on-surface">
             View active jobs
           </Link>
         </div>
@@ -500,38 +500,38 @@ export function ReceptionWorkspace({
   if (step === "services" && selectedVehicle) {
     const v = selectedVehicle.vehicle;
     return (
-      <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/30">
+      <div className="stitch-card">
         <ReceptionStepIndicator currentStep={step} />
 
         <button
           type="button"
           onClick={handleBackToSearch}
-          className="text-sm font-medium text-slate-500 hover:text-slate-700"
+          className="text-sm font-medium text-on-surface-variant hover:text-on-surface"
         >
           &larr; Back to search
         </button>
 
-        <p className="mt-3 text-sm text-slate-600">{RECEPTION_EXISTING_VEHICLE_STEP_COPY}</p>
+        <p className="mt-3 text-sm text-on-surface-variant">{RECEPTION_EXISTING_VEHICLE_STEP_COPY}</p>
 
         <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
           <span className="inline-flex rounded-md border border-emerald-200 bg-white px-2 py-0.5 text-[11px] font-medium text-emerald-800">
             {RECEPTION_VEHICLE_FOUND_LABEL}
           </span>
-          <p className="mt-2 text-sm font-semibold text-slate-900">{formatReceptionVehicleTitle(v)}</p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-2 text-sm font-semibold text-on-surface">{formatReceptionVehicleTitle(v)}</p>
+          <p className="mt-1 text-xs text-on-surface-variant">
             VIN: {v.vin}
             {v.plate ? ` · Plate: ${v.plate}` : ""}
           </p>
-          <p className="mt-1 text-xs text-slate-600">Customer: {v.serviceClient.name}</p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-on-surface-variant">Customer: {v.serviceClient.name}</p>
+          <p className="mt-1 text-xs text-on-surface-variant">
             Last visit: {formatReceptionLastVisit(v.workOrders)}
           </p>
-          <p className="mt-1 text-xs text-slate-400">Location: {v.location.name}</p>
+          <p className="mt-1 text-xs text-on-surface-variant">Location: {v.location.name}</p>
           {v.workOrders.length > 0 ? (
             <div className="mt-3 border-t border-emerald-200/80 pt-3">
-              <p className="text-xs font-medium text-slate-600">Recent work orders:</p>
+              <p className="text-xs font-medium text-on-surface-variant">Recent work orders:</p>
               {v.workOrders.map((wo) => (
-                <p key={wo.id} className="mt-1 text-xs text-slate-500">
+                <p key={wo.id} className="mt-1 text-xs text-on-surface-variant">
                   {wo.workOrderNumber} · {wo.status} · {new Date(wo.createdAt).toLocaleDateString()}
                   {wo.serviceLines.length > 0
                     ? ` · ${wo.serviceLines.map((sl) => sl.serviceNameSnapshot).join(", ")}`
@@ -544,8 +544,8 @@ export function ReceptionWorkspace({
 
         <form onSubmit={handleSubmit} className="mt-6">
           <div className="border-t border-slate-200 pt-6">
-            <h2 className="text-sm font-semibold text-slate-900">Services for this work order</h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <h2 className="text-sm font-semibold text-on-surface">Services for this work order</h2>
+            <p className="mt-1 text-sm text-on-surface-variant">
               Select catalog services for today&apos;s visit. They attach to the new work order, not the vehicle
               record.
             </p>
@@ -579,10 +579,10 @@ export function ReceptionWorkspace({
                         className="mt-1"
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium text-slate-900">
+                        <span className="block text-sm font-medium text-on-surface">
                           {item.name}
                         </span>
-                        <span className="mt-0.5 block text-xs text-slate-500">
+                        <span className="mt-0.5 block text-xs text-on-surface-variant">
                           {formatWorkOrderMoney(item.fixedPriceMinor, item.currencyCode)}
                           {item.category ? ` · ${item.category}` : ""}
                         </span>
@@ -600,7 +600,7 @@ export function ReceptionWorkspace({
 
           <div className="mt-6">
             <label
-              className="block text-sm font-medium text-slate-700"
+              className="stitch-label mb-1.5 block"
               htmlFor="reception-work-order-notes"
             >
               Work order notes
@@ -610,7 +610,7 @@ export function ReceptionWorkspace({
               value={form.workOrderNotes}
               onChange={(event) => updateForm("workOrderNotes", event.target.value)}
               rows={2}
-              className="mt-1.5 w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+              className="stitch-input"
               placeholder="Optional notes for the job"
               disabled={isSubmitting}
             />
@@ -626,13 +626,13 @@ export function ReceptionWorkspace({
             <button
               type="submit"
               disabled={isSubmitting || activeCatalogItems.length === 0}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+              className="stitch-btn-primary disabled:opacity-60"
             >
               {isSubmitting ? "Creating work order…" : "Create work order"}
             </button>
             <Link
               href="/jobs"
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              className="stitch-btn-secondary"
             >
               View jobs
             </Link>
@@ -644,24 +644,24 @@ export function ReceptionWorkspace({
 
   if (step === "create") {
     return (
-      <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/30">
+      <div className="stitch-card">
         <ReceptionStepIndicator currentStep={step} />
 
         <button
           type="button"
           onClick={handleBackToSearch}
-          className="text-sm font-medium text-slate-500 hover:text-slate-700"
+          className="text-sm font-medium text-on-surface-variant hover:text-on-surface"
         >
           &larr; Back to search
         </button>
 
-        <p className="mt-3 text-sm text-slate-600">{RECEPTION_NEW_VEHICLE_STEP_COPY}</p>
+        <p className="mt-3 text-sm text-on-surface-variant">{RECEPTION_NEW_VEHICLE_STEP_COPY}</p>
         <WorkflowModelCallout>{WORK_ORDER_MODEL_CALLOUT}</WorkflowModelCallout>
 
         <form onSubmit={handleSubmit} className="mt-6">
           <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-            <h2 className="text-sm font-semibold text-slate-900">Customer &amp; vehicle</h2>
-            <p className="mt-1 text-xs text-slate-500">
+            <h2 className="text-sm font-semibold text-on-surface">Customer &amp; vehicle</h2>
+            <p className="mt-1 text-xs text-on-surface-variant">
               The VIN will be decoded automatically. This creates the vehicle record once.
             </p>
           </div>
@@ -669,7 +669,7 @@ export function ReceptionWorkspace({
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <label
-                className="block text-sm font-medium text-slate-700"
+                className="stitch-label mb-1.5 block"
                 htmlFor="reception-service-client"
               >
                 Service client
@@ -678,7 +678,7 @@ export function ReceptionWorkspace({
                 id="reception-service-client"
                 value={form.serviceClientId}
                 onChange={(event) => updateForm("serviceClientId", event.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                className="stitch-select w-full"
                 disabled={isSubmitting}
               >
                 {activeClients.map((client) => (
@@ -694,7 +694,7 @@ export function ReceptionWorkspace({
 
             <div>
               <label
-                className="block text-sm font-medium text-slate-700"
+                className="stitch-label mb-1.5 block"
                 htmlFor="reception-location"
               >
                 Location
@@ -703,7 +703,7 @@ export function ReceptionWorkspace({
                 id="reception-location"
                 value={form.locationId}
                 onChange={(event) => updateForm("locationId", event.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                className="stitch-select w-full"
                 disabled={isSubmitting || clientLocations.length === 0}
               >
                 {clientLocations.length === 0 ? (
@@ -723,7 +723,7 @@ export function ReceptionWorkspace({
 
             <div className="sm:col-span-2">
               <label
-                className="block text-sm font-medium text-slate-700"
+                className="stitch-label mb-1.5 block"
                 htmlFor="reception-vin"
               >
                 VIN
@@ -735,7 +735,7 @@ export function ReceptionWorkspace({
                   value={form.vin}
                   onChange={(event) => updateForm("vin", event.target.value.toUpperCase())}
                   maxLength={17}
-                  className="min-w-[16rem] flex-1 rounded-lg border border-slate-200 px-3.5 py-2.5 font-mono uppercase text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                  className="stitch-input min-w-[16rem] flex-1 font-mono uppercase"
                   placeholder="17-character VIN"
                   autoComplete="off"
                   disabled={isSubmitting}
@@ -744,7 +744,7 @@ export function ReceptionWorkspace({
                   type="button"
                   onClick={() => decodeVinPreview(form.vin)}
                   disabled={!vinIsValid || isSubmitting || isDecoding}
-                  className="rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="stitch-btn-secondary"
                 >
                   {isDecoding ? "Decoding…" : "Decode VIN"}
                 </button>
@@ -753,17 +753,17 @@ export function ReceptionWorkspace({
                 <p className="mt-1.5 text-sm text-red-600">{fieldErrors.vin}</p>
               )}
               {isDecoding && (
-                <p className="mt-2 text-sm text-slate-600">{vinDecodePreviewLoadingCopy()}</p>
+                <p className="mt-2 text-sm text-on-surface-variant">{vinDecodePreviewLoadingCopy()}</p>
               )}
               {decodePreview && (
-                <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-700">
-                  <p className="font-medium text-slate-900">
+                <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-on-surface-variant">
+                  <p className="font-medium text-on-surface">
                     {formatDecodedVehicleSummary(decodePreview)}
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-on-surface-variant">
                     {formatVinDecodeSummary(decodePreview)}
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-on-surface-variant">
                     Source: {formatVinDecodeSourceLabel(decodePreview.decodeSource)} · preview
                     only; server re-decodes on create.
                   </p>
@@ -778,7 +778,7 @@ export function ReceptionWorkspace({
 
             <div>
               <label
-                className="block text-sm font-medium text-slate-700"
+                className="stitch-label mb-1.5 block"
                 htmlFor="reception-plate"
               >
                 License plate
@@ -788,7 +788,7 @@ export function ReceptionWorkspace({
                 type="text"
                 value={form.plate}
                 onChange={(event) => updateForm("plate", event.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                className="stitch-input"
                 placeholder="Optional"
                 autoComplete="off"
                 disabled={isSubmitting}
@@ -797,7 +797,7 @@ export function ReceptionWorkspace({
 
             <div>
               <label
-                className="block text-sm font-medium text-slate-700"
+                className="stitch-label mb-1.5 block"
                 htmlFor="reception-color"
               >
                 Vehicle color
@@ -807,7 +807,7 @@ export function ReceptionWorkspace({
                 type="text"
                 value={form.color}
                 onChange={(event) => updateForm("color", event.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                className="stitch-input"
                 placeholder="Optional"
                 autoComplete="off"
                 disabled={isSubmitting}
@@ -816,7 +816,7 @@ export function ReceptionWorkspace({
 
             <div className="sm:col-span-2">
               <label
-                className="block text-sm font-medium text-slate-700"
+                className="stitch-label mb-1.5 block"
                 htmlFor="reception-vehicle-notes"
               >
                 Vehicle notes
@@ -826,7 +826,7 @@ export function ReceptionWorkspace({
                 value={form.notes}
                 onChange={(event) => updateForm("notes", event.target.value)}
                 rows={2}
-                className="mt-1.5 w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                className="stitch-input"
                 placeholder="Optional intake notes"
                 disabled={isSubmitting}
               />
@@ -834,8 +834,8 @@ export function ReceptionWorkspace({
           </div>
 
           <div className="mt-8 border-t border-slate-200 pt-6">
-            <h2 className="text-sm font-semibold text-slate-900">Services for this work order</h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <h2 className="text-sm font-semibold text-on-surface">Services for this work order</h2>
+            <p className="mt-1 text-sm text-on-surface-variant">
               Select catalog services for the first visit. They attach to the work order being created.
             </p>
 
@@ -871,10 +871,10 @@ export function ReceptionWorkspace({
                         className="mt-1"
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium text-slate-900">
+                        <span className="block text-sm font-medium text-on-surface">
                           {item.name}
                         </span>
-                        <span className="mt-0.5 block text-xs text-slate-500">
+                        <span className="mt-0.5 block text-xs text-on-surface-variant">
                           {formatWorkOrderMoney(item.fixedPriceMinor, item.currencyCode)}
                           {item.category ? ` · ${item.category}` : ""}
                         </span>
@@ -892,7 +892,7 @@ export function ReceptionWorkspace({
 
           <div className="mt-6">
             <label
-              className="block text-sm font-medium text-slate-700"
+              className="stitch-label mb-1.5 block"
               htmlFor="reception-work-order-notes"
             >
               Work order notes
@@ -902,7 +902,7 @@ export function ReceptionWorkspace({
               value={form.workOrderNotes}
               onChange={(event) => updateForm("workOrderNotes", event.target.value)}
               rows={2}
-              className="mt-1.5 w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+              className="stitch-input"
               placeholder="Optional notes for the job"
               disabled={isSubmitting}
             />
@@ -922,13 +922,13 @@ export function ReceptionWorkspace({
                 clientLocations.length === 0 ||
                 activeCatalogItems.length === 0
               }
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+              className="stitch-btn-primary disabled:opacity-60"
             >
               {isSubmitting ? "Creating vehicle & work order…" : "Create vehicle & work order"}
             </button>
             <Link
               href="/jobs"
-              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              className="stitch-btn-secondary"
             >
               View jobs
             </Link>

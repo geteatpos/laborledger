@@ -74,7 +74,7 @@ export function ClientInvoiceDetailPanel({
       <ClientInvoicePaymentsPanel invoice={invoice} onUpdated={onUpdated} />
 
       {invoice.deliveries && invoice.deliveries.length > 0 ? (
-        <section className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+        <section className="stitch-card p-4">
           <h3 className="stitch-label inline-flex items-center gap-1.5">
             <MaterialIcon name="outgoing_mail" className="text-[16px]" />
             Historial de envío

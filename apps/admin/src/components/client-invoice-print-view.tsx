@@ -74,7 +74,7 @@ export function ClientInvoicePrintView({ invoice, companyName }: ClientInvoicePr
       </header>
 
       <section className="mt-6 grid gap-6 sm:grid-cols-2">
-        <div className="rounded-xl bg-surface-container-low/70 p-4">
+        <div className="stitch-card p-4">
           <h2 className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
             Facturar a
           </h2>
@@ -91,7 +91,7 @@ export function ClientInvoicePrintView({ invoice, companyName }: ClientInvoicePr
             <p className="mt-0.5 text-xs text-on-surface-variant">Tel: {invoice.billToSnapshot.phone}</p>
           ) : null}
         </div>
-        <div className="rounded-xl bg-surface-container-low/70 p-4">
+        <div className="stitch-card p-4">
           <h2 className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
             Fechas
           </h2>
@@ -131,7 +131,7 @@ export function ClientInvoicePrintView({ invoice, companyName }: ClientInvoicePr
       </section>
 
       {invoiceVehicle ? (
-        <section className="mt-6 rounded-xl bg-surface-container-low/70 p-4">
+        <section className="mt-6 stitch-card p-4">
           <h2 className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
             Vehículo
           </h2>
@@ -154,28 +154,28 @@ export function ClientInvoicePrintView({ invoice, companyName }: ClientInvoicePr
         <h2 className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
           Detalle de servicios
         </h2>
-        <div className="mt-3 overflow-hidden rounded-xl border border-outline-variant">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-container-low text-left">
+        <div className="mt-3 stitch-table-wrap">
+          <table className="stitch-table w-full text-sm">
+            <thead>
               <tr>
-                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                <th className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
                   Descripción
                 </th>
-                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                <th className="text-right text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
                   Cant.
                 </th>
-                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                <th className="text-right text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
                   Precio
                 </th>
-                <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                <th className="text-right text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
                   Importe
                 </th>
               </tr>
             </thead>
             <tbody>
               {(invoice.lines ?? []).map((line) => (
-                <tr key={line.id} className="border-t border-outline-variant/50 align-top">
-                  <td className="px-4 py-3 font-medium text-on-surface">
+                <tr key={line.id} className="align-top">
+                  <td className="font-medium text-on-surface">
                     <p>{line.serviceNameSnapshot}</p>
                     {line.description?.trim() ? (
                       <p className="mt-0.5 text-xs font-normal text-on-surface-variant">
@@ -183,11 +183,11 @@ export function ClientInvoicePrintView({ invoice, companyName }: ClientInvoicePr
                       </p>
                     ) : null}
                   </td>
-                  <td className="px-4 py-3 text-right text-on-surface-variant">{line.quantity}</td>
-                  <td className="px-4 py-3 text-right text-on-surface-variant">
+                  <td className="text-right text-on-surface-variant">{line.quantity}</td>
+                  <td className="text-right text-on-surface-variant">
                     {formatClientInvoiceMoney(line.unitPriceMinor, line.currencyCode)}
                   </td>
-                  <td className="px-4 py-3 text-right font-semibold text-on-surface">
+                  <td className="text-right font-semibold text-on-surface">
                     {formatClientInvoiceMoney(line.lineTotalMinor, line.currencyCode)}
                   </td>
                 </tr>
@@ -205,31 +205,31 @@ export function ClientInvoicePrintView({ invoice, companyName }: ClientInvoicePr
       </section>
 
       <section className="mt-6 flex justify-end">
-        <div className="w-full max-w-sm space-y-2 rounded-xl bg-primary-container px-4 py-4 text-on-primary">
-          <div className="flex justify-between text-sm text-on-primary/75">
-            <span>Subtotal</span>
-            <span>{formatClientInvoiceMoney(invoice.subtotalMinor, invoice.currencyCode)}</span>
+        <div className="stitch-card w-full max-w-sm space-y-2 px-4 py-4">
+          <div className="flex justify-between text-sm">
+            <span className="text-on-surface-variant">Subtotal</span>
+            <span className="font-medium text-on-surface">{formatClientInvoiceMoney(invoice.subtotalMinor, invoice.currencyCode)}</span>
           </div>
-          <div className="flex justify-between text-sm text-on-primary/75">
-            <span>Impuesto</span>
-            <span>{formatClientInvoiceMoney(invoice.taxMinor, invoice.currencyCode)}</span>
+          <div className="flex justify-between text-sm">
+            <span className="text-on-surface-variant">IVA (19%)</span>
+            <span className="font-medium text-on-surface">{formatClientInvoiceMoney(invoice.taxMinor, invoice.currencyCode)}</span>
           </div>
-          <div className="flex justify-between border-t border-on-primary/20 pt-2 text-lg font-bold">
+          <div className="flex justify-between border-t border-[#e5e7eb] pt-2 text-lg font-bold">
             <span>Total</span>
-            <span>{formatClientInvoiceMoney(invoice.totalMinor, invoice.currencyCode)}</span>
+            <span className="text-on-surface">{formatClientInvoiceMoney(invoice.totalMinor, invoice.currencyCode)}</span>
           </div>
-          <div className="flex justify-between text-sm text-on-primary/75">
-            <span>Pagado</span>
-            <span>{formatClientInvoiceMoney(amountPaidMinor, invoice.currencyCode)}</span>
+          <div className="flex justify-between text-sm">
+            <span className="text-on-surface-variant">Pagado</span>
+            <span className="font-medium text-on-surface">{formatClientInvoiceMoney(amountPaidMinor, invoice.currencyCode)}</span>
           </div>
-          <div className="flex justify-between border-t border-on-primary/20 pt-2 text-lg font-bold">
+          <div className="flex justify-between border-t border-[#e5e7eb] pt-2 text-lg font-bold">
             <span>Balance</span>
-            <span>{formatClientInvoiceMoney(balanceMinor, invoice.currencyCode)}</span>
+            <span className="text-on-surface">{formatClientInvoiceMoney(balanceMinor, invoice.currencyCode)}</span>
           </div>
         </div>
       </section>
 
-      <section className="mt-6 rounded-xl border border-outline-variant p-4">
+      <section className="mt-6 stitch-card p-4">
         <h2 className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
           Instrucciones de pago
         </h2>
@@ -238,7 +238,7 @@ export function ClientInvoicePrintView({ invoice, companyName }: ClientInvoicePr
         </p>
       </section>
 
-      <section className="mt-6 rounded-xl border border-dashed border-outline-variant p-4">
+      <section className="mt-6 stitch-card p-4">
         <h2 className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
           Notas
         </h2>

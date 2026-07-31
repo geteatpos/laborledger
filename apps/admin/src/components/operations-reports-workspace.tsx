@@ -76,13 +76,13 @@ export function OperationsReportsWorkspace({
 
   return (
     <div className="space-y-8">
-      <p className="rounded-xl border border-slate-200/80 bg-white px-4 py-3 text-sm leading-relaxed text-slate-600 shadow-sm shadow-slate-200/20">
+      <p className="stitch-card px-4 py-3 text-sm leading-relaxed text-slate-600">
         {OPERATIONS_REPORTS_DISCLAIMER}
       </p>
 
       <form
         onSubmit={applyRange}
-        className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm shadow-slate-200/30"
+        className="stitch-card p-4"
       >
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -96,7 +96,7 @@ export function OperationsReportsWorkspace({
                 type="date"
                 value={from}
                 onChange={(event) => setFrom(event.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                className="stitch-input"
               />
             </label>
             <label className="text-sm text-slate-600">
@@ -105,12 +105,12 @@ export function OperationsReportsWorkspace({
                 type="date"
                 value={to}
                 onChange={(event) => setTo(event.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                className="stitch-input"
               />
             </label>
             <button
               type="submit"
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="stitch-btn-primary"
             >
               Apply range
             </button>
@@ -120,7 +120,7 @@ export function OperationsReportsWorkspace({
       </form>
 
       {showEmptyState ? (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-sm text-slate-600">
+        <div className="stitch-card p-6 text-sm text-slate-600">
           <p className="font-medium text-slate-900">{operationsReportsEmptyMessage(true).title}</p>
           <p className="mt-2">{operationsReportsEmptyMessage(true).description}</p>
         </div>
@@ -299,7 +299,7 @@ function ReportSection({
   readonly children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/30">
+    <section className="stitch-card p-5">
       <h2 className="text-base font-semibold text-slate-900">{title}</h2>
       <p className="mt-1 text-sm text-slate-500">{description}</p>
       <div className="mt-5">{children}</div>
@@ -309,7 +309,7 @@ function ReportSection({
 
 function KpiCard({ label, value }: { readonly label: string; readonly value: string }) {
   return (
-    <article className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4">
+    <article className="stitch-card p-4">
       <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-slate-400">{label}</p>
       <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{value}</p>
     </article>
@@ -326,7 +326,7 @@ function SnapshotCard({
   readonly children: React.ReactNode;
 }) {
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-5">
+    <article className="stitch-card p-5">
       <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
       <p className="mt-1 text-xs text-slate-500">{description}</p>
       <div className="mt-4">{children}</div>
