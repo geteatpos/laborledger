@@ -6,14 +6,23 @@ import { resolveNhtsaModelYear } from "./vin-model-year";
 
 const DEFAULT_BASE_URL = "https://vpic.nhtsa.dot.gov/api";
 const DEFAULT_TIMEOUT_MS = 5000;
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export type FetchLike = typeof fetch;
 
 @Injectable()
 export class NhtsaVpicVinDecoderService implements VinDecoder {
+  private readonly cache = new Map<string, { result: VinDecodeResult; cachedAt: number }>();
+
   constructor(@Optional() private readonly fetchImpl?: FetchLike) {}
 
   async decode(vin: string, options?: VinDecodeOptions): Promise<VinDecodeResult> {
+    // Check cache first
+    const cached = this.cache.get(vin);
+    if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
+      return cached.result;
+    }
+
     const fetchLike = this.fetchImpl ?? fetch;
     const baseUrl = process.env.NHTSA_VPIC_BASE_URL?.trim() || DEFAULT_BASE_URL;
     const timeoutMs = Number.parseInt(process.env.NHTSA_VPIC_TIMEOUT_MS ?? "", 10) || DEFAULT_TIMEOUT_MS;
@@ -56,6 +65,9 @@ export class NhtsaVpicVinDecoderService implements VinDecoder {
             "The NHTSA vPIC VIN decoder could not decode this VIN. Verify the VIN and try again."
         );
       }
+
+      // Cache the result before returning
+      this.cache.set(vin, { result: mapped, cachedAt: Date.now() });
 
       return mapped;
     } catch (error) {
