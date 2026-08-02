@@ -15,11 +15,6 @@ export type AdminNavSection = {
 export const companyAdminNavSections: readonly AdminNavSection[] = [
   { id: "dashboard", label: "Dashboard", href: "/" },
   { id: "employees", label: "Empleados", href: "/employees" },
-  {
-    id: "credentials",
-    label: "Credenciales",
-    href: "/employees"
-  },
   { id: "clients", label: "Clientes", href: "/service-clients" },
   { id: "vehicles", label: "Vehículos", href: "/vehicles" },
   { id: "maintenance", label: "Mantenimiento", href: "/mechanic-orders" },
