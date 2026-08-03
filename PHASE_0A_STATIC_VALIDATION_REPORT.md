@@ -105,7 +105,7 @@ Second backend fix pass modified:
 ## Reviewer result
 
 - PASS WITH CONDITIONS.
-- Conditions: `PHASE_0A_IMPLEMENTATION_REPORT.md` is stale/inaccurate after static validation and omits `mobile-validation.ts`; preserve validation transcript/results.
+- Conditions: `docs/archive/PHASE_0A_IMPLEMENTATION_REPORT.md` is stale/inaccurate after static validation and omits `mobile-validation.ts`; preserve validation transcript/results.
 
 ## QA result
 
@@ -114,7 +114,7 @@ Second backend fix pass modified:
 
 ## Unresolved warnings
 
-- `PHASE_0A_IMPLEMENTATION_REPORT.md` is stale relative to static validation, but this report is the only file requested for update.
+- `docs/archive/PHASE_0A_IMPLEMENTATION_REPORT.md` is stale relative to static validation, but this report is the only file requested for update.
 - Integration tests were not run.
 - Migrations were not executed or database-validated.
 - `DATABASE_URL` validation env was not available.

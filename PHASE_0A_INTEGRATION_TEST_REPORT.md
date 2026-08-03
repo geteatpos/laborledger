@@ -383,7 +383,7 @@ M packages/database/prisma/schema.prisma
 Untracked files/directories reported by `git status --short` and expanded by file glob:
 
 ```text
-?? PHASE_0A_IMPLEMENTATION_REPORT.md
+?? docs/archive/PHASE_0A_IMPLEMENTATION_REPORT.md
 ?? PHASE_0A_STATIC_VALIDATION_REPORT.md
 ?? apps/api/src/modules/mobile/current-mobile-session.decorator.ts
 ?? apps/api/src/modules/mobile/mobile-audit.service.ts
@@ -459,7 +459,7 @@ apps/api/test/vin-decoder.spec.ts
 
 ```text
 CODE_GRAPH.md
-PHASE_0A_IMPLEMENTATION_REPORT.md
+docs/archive/PHASE_0A_IMPLEMENTATION_REPORT.md
 PHASE_0A_STATIC_VALIDATION_REPORT.md
 PHASE_0A_INTEGRATION_TEST_REPORT.md
 ```
@@ -648,7 +648,7 @@ pnpm typecheck remains red due to non-mobile errors.
 Migration/runtime DB validation was not independently re-run by QA.
 MOBILE_AUTH_HASH_PEPPER must be configured at runtime.
 Mobile rate-limit logic has a remaining risk: invalid-attempt lock checks and recorded failures can be keyed with different tenant context, weakening lockout consistency.
-PHASE_0A_IMPLEMENTATION_REPORT.md is stale relative to the later validation evidence.
+docs/archive/PHASE_0A_IMPLEMENTATION_REPORT.md is stale relative to the later validation evidence.
 Working tree includes many untracked mobile files and the migration, so review/commit grouping needs care.
 ```
 
@@ -740,7 +740,7 @@ Files:
 
 ```text
 CODE_GRAPH.md
-PHASE_0A_IMPLEMENTATION_REPORT.md
+docs/archive/PHASE_0A_IMPLEMENTATION_REPORT.md
 PHASE_0A_STATIC_VALIDATION_REPORT.md
 PHASE_0A_INTEGRATION_TEST_REPORT.md
 ```
@@ -763,7 +763,7 @@ MOBILE_AUTH_HASH_PEPPER is mandatory for runtime mobile hashing.
 Pepper rotation is not implemented and would invalidate stored mobile hashes/tokens.
 Reviewer identified low-risk follow-ups around mobile ID validation and distributed invalid-enrollment throttling.
 QA identified a rate-limit consistency risk where invalid-attempt lock checks and recorded failures can use different tenant context.
-PHASE_0A_IMPLEMENTATION_REPORT.md and PHASE_0A_STATIC_VALIDATION_REPORT.md pre-existed this final report step and may be stale relative to the final passing test evidence.
+docs/archive/PHASE_0A_IMPLEMENTATION_REPORT.md and PHASE_0A_STATIC_VALIDATION_REPORT.md pre-existed this final report step and may be stale relative to the final passing test evidence.
 Working tree contains untracked implementation/test/report files; staging must be selective.
 No commit or push has been performed.
 ```
