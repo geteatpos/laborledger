@@ -1,13 +1,14 @@
 # LaborLedger
 
-Multi-company labor timekeeping and operations platform (API + Admin + Field PWA).
+Multi-company labor timekeeping and operations platform (API + Admin).
 
 ## Stack
 
 - **API:** NestJS (`apps/api`) — port 4000
 - **Admin:** Next.js (`apps/admin`) — port 3000
-- **Field PWA:** Next.js (`apps/field`) — port 3001
 - **Database:** PostgreSQL + Prisma (`packages/database`)
+- **Shared config:** TypeScript config package (`packages/config`)
+- **Repository tests:** Vitest workspace package (`tests`)
 
 ## Local setup
 
@@ -17,7 +18,7 @@ cp .env.example .env
 
 pnpm install
 pnpm db:generate
-pnpm dev
+pnpm --parallel --filter @laborledger/admin --filter @laborledger/api dev
 ```
 
 ## Production (VPS — PM2 + Nginx, no Docker)
@@ -27,7 +28,6 @@ pnpm install --frozen-lockfile
 pnpm --filter @laborledger/database db:generate
 pnpm --filter @laborledger/api build
 pnpm --filter @laborledger/admin build
-pnpm --filter @laborledger/field build
 
 # Create .env.production on the server (not committed)
 pm2 start ecosystem.config.cjs
@@ -57,4 +57,4 @@ pnpm --filter @laborledger/api test
 
 - Existing PostgreSQL databases are preserved — use `pnpm db:migrate` only for safe forward migrations.
 - API stays on localhost; Admin BFF proxies authenticated requests server-side.
-- Field/PWA is the single employee-facing app (`apps/field`).
+- The current workspace contains `apps/admin`, `apps/api`, `packages/database`, `packages/config`, and `tests`; there is no `apps/field` package in this checkout.
