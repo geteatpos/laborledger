@@ -31,14 +31,14 @@ function SupervisorStatusBadge({ status }: { readonly status: CompanySupervisorR
   if (status === "INVITED") {
     return (
       <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800">
-        Pending invite
+        Invitación pendiente
       </span>
     );
   }
 
   return (
     <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
-      Active
+      Activo
     </span>
   );
 }
@@ -66,16 +66,16 @@ function SupervisorTable({
                 Supervisor
               </th>
               <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
-                Email
+                Correo
               </th>
               <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
-                Locations assigned
+                Ubicaciones asignadas
               </th>
               <th className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
-                Status
+                Estado
               </th>
               <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
-                Actions
+                Acciones
               </th>
             </tr>
           </thead>
@@ -97,7 +97,7 @@ function SupervisorTable({
                     {locationNames.length > 0 ? (
                       <span title={locationNames.join(", ")}>
                         {locationNames.slice(0, 2).join(", ")}
-                        {locationNames.length > 2 ? ` +${locationNames.length - 2} more` : ""}
+                        {locationNames.length > 2 ? ` +${locationNames.length - 2} más` : ""}
                       </span>
                     ) : (
                       <span className="text-slate-400">
@@ -114,10 +114,10 @@ function SupervisorTable({
                         href={`/users?companyId=${encodeURIComponent(companyId)}#supervisor-access`}
                         className="text-sm font-medium text-brand-700 hover:text-brand-800"
                       >
-                        Manage locations
+                        Gestionar ubicaciones
                       </Link>
                     ) : (
-                      <span className="text-sm text-slate-400">Awaiting acceptance</span>
+                      <span className="text-sm text-slate-400">Esperando aceptación</span>
                     )}
                   </td>
                 </tr>
@@ -153,7 +153,7 @@ export function SupervisorsWorkspace({
           {SUPERVISORS_INTRO_COPY}
         </EmployeesModuleIntro>
         <EmptyState
-          title="No supervisors yet"
+          title="Todavía no hay supervisores"
           description={SUPERVISORS_INTRO_COPY}
           action={
             <AddSupervisorCta
@@ -175,15 +175,15 @@ export function SupervisorsWorkspace({
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-slate-500">
-          {supervisors.length} {supervisors.length === 1 ? "supervisor" : "supervisors"} ·{" "}
-          {activeSupervisors.length} active · {pendingSupervisors.length} pending
+          {supervisors.length} {supervisors.length === 1 ? "supervisor" : "supervisores"} ·{" "}
+          {activeSupervisors.length} activos · {pendingSupervisors.length} pendientes
         </p>
         <div className="flex flex-wrap gap-2">
           <Link
             href={manageLocationsHref}
             className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
           >
-            Manage locations
+            Gestionar ubicaciones
           </Link>
           <AddSupervisorCta companyId={companyId} companyName={companyName} locations={locations} />
         </div>
@@ -191,7 +191,7 @@ export function SupervisorsWorkspace({
 
       {pendingSupervisors.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-slate-900">Pending invitations</h2>
+          <h2 className="text-sm font-semibold text-slate-900">Invitaciones pendientes</h2>
           <SupervisorTable
             supervisors={pendingSupervisors}
             assignmentsBySupervisor={assignmentsBySupervisor}
@@ -202,7 +202,7 @@ export function SupervisorsWorkspace({
 
       {activeSupervisors.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-slate-900">Active supervisors</h2>
+          <h2 className="text-sm font-semibold text-slate-900">Supervisores activos</h2>
           <SupervisorTable
             supervisors={activeSupervisors}
             assignmentsBySupervisor={assignmentsBySupervisor}
