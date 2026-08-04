@@ -2922,6 +2922,226 @@ export class CompanyOperationsService {
     return this.unassignSupervisor(principal, assignment.id);
   }
 
+  async bulkRemoveSupervisorFromCompanyLocations(
+    principal: AuthenticatedPrincipal,
+    companyId: string,
+    supervisorUserId: string,
+    locationIds: string[]
+  ) {
+    await this.companyScopeService.requireManagementCompany(principal, companyId);
+
+    const uniqueLocationIds = [...new Set(locationIds)];
+    if (uniqueLocationIds.length === 0) {
+      throw new BadRequestException("Selecciona al menos una ubicación.");
+    }
+
+    const assignments = await this.prisma.supervisorLocationAssignment.findMany({
+      where: {
+        companyId,
+        supervisorUserId,
+        locationId: { in: uniqueLocationIds },
+        unassignedAt: null
+      }
+    });
+
+    if (assignments.length === 0) {
+      throw new NotFoundException("No active location assignments found for this supervisor.");
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const unassignedAt = new Date();
+
+      await tx.supervisorLocationAssignment.updateMany({
+        where: { id: { in: assignments.map((assignment) => assignment.id) } },
+        data: { unassignedAt }
+      });
+
+      await this.createAuditEvents(
+        tx,
+        assignments.map((assignment) => ({
+          actorUserId: principal.userId,
+          action: "SUPERVISOR_LOCATION_UNASSIGNED",
+          targetType: "SupervisorLocationAssignment",
+          targetId: assignment.id,
+          groupId: assignment.groupId,
+          companyId: assignment.companyId,
+          metadata: {
+            unassignedAt: unassignedAt.toISOString(),
+            bulk: true,
+            bulkCount: assignments.length
+          }
+        }))
+      );
+
+      return { removedCount: assignments.length };
+    });
+  }
+
+  async listCompanyMembers(principal: AuthenticatedPrincipal, companyId: string) {
+    await this.companyScopeService.requireManagementCompany(principal, companyId);
+
+    const memberships = await this.prisma.companyMembership.findMany({
+      where: {
+        companyId,
+        role: { in: [CompanyRole.COMPANY_ADMIN, CompanyRole.SUPERVISOR] },
+        status: MembershipStatus.ACTIVE
+      },
+      include: {
+        user: { select: { id: true, email: true, fullName: true } }
+      },
+      orderBy: [{ role: "asc" }, { email: "asc" }]
+    });
+
+    const assignmentCounts = await this.prisma.supervisorLocationAssignment.groupBy({
+      by: ["supervisorUserId"],
+      where: { companyId, unassignedAt: null },
+      _count: { _all: true }
+    });
+    const countBySupervisor = new Map(
+      assignmentCounts.map((row) => [row.supervisorUserId, row._count._all])
+    );
+
+    return memberships.map((membership) => ({
+      membershipId: membership.id,
+      userId: membership.user?.id ?? null,
+      email: membership.email,
+      fullName: membership.user?.fullName ?? null,
+      role: membership.role,
+      assignedLocationCount:
+        membership.role === CompanyRole.SUPERVISOR && membership.user
+          ? (countBySupervisor.get(membership.user.id) ?? 0)
+          : null
+    }));
+  }
+
+  private async countOtherActiveCompanyAdmins(companyId: string, excludeMembershipId: string) {
+    return this.prisma.companyMembership.count({
+      where: {
+        companyId,
+        role: CompanyRole.COMPANY_ADMIN,
+        status: MembershipStatus.ACTIVE,
+        id: { not: excludeMembershipId }
+      }
+    });
+  }
+
+  async revokeCompanyMembership(
+    principal: AuthenticatedPrincipal,
+    companyId: string,
+    membershipId: string
+  ) {
+    const company = await this.companyScopeService.requireManagementCompany(principal, companyId);
+
+    const membership = await this.prisma.companyMembership.findFirst({
+      where: { id: membershipId, companyId, status: MembershipStatus.ACTIVE }
+    });
+
+    if (!membership) {
+      throw new NotFoundException("Active membership not found.");
+    }
+
+    if (membership.userId && membership.userId === principal.userId) {
+      throw new BadRequestException("No puedes revocar tu propio acceso.");
+    }
+
+    if (membership.role === CompanyRole.COMPANY_ADMIN) {
+      const remainingAdmins = await this.countOtherActiveCompanyAdmins(companyId, membershipId);
+      if (remainingAdmins === 0) {
+        throw new BadRequestException(
+          "No puedes revocar al único administrador activo de la compañía."
+        );
+      }
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const revokedAt = new Date();
+      const updated = await tx.companyMembership.update({
+        where: { id: membershipId },
+        data: { status: MembershipStatus.REVOKED }
+      });
+
+      if (membership.role === CompanyRole.SUPERVISOR && membership.userId) {
+        await tx.supervisorLocationAssignment.updateMany({
+          where: { companyId, supervisorUserId: membership.userId, unassignedAt: null },
+          data: { unassignedAt: revokedAt }
+        });
+      }
+
+      await this.createAuditEvents(tx, [
+        {
+          actorUserId: principal.userId,
+          action: "COMPANY_MEMBERSHIP_REVOKED",
+          targetType: "CompanyMembership",
+          targetId: membershipId,
+          groupId: company.groupId,
+          companyId,
+          metadata: {
+            email: membership.email,
+            role: membership.role,
+            revokedUserId: membership.userId
+          }
+        }
+      ]);
+
+      return updated;
+    });
+  }
+
+  async updateCompanyMembershipRole(
+    principal: AuthenticatedPrincipal,
+    companyId: string,
+    membershipId: string,
+    newRole: CompanyRole
+  ) {
+    const company = await this.companyScopeService.requireManagementCompany(principal, companyId);
+
+    const membership = await this.prisma.companyMembership.findFirst({
+      where: { id: membershipId, companyId, status: MembershipStatus.ACTIVE }
+    });
+
+    if (!membership) {
+      throw new NotFoundException("Active membership not found.");
+    }
+
+    if (membership.role === newRole) {
+      return membership;
+    }
+
+    if (membership.role === CompanyRole.COMPANY_ADMIN && newRole === CompanyRole.SUPERVISOR) {
+      const remainingAdmins = await this.countOtherActiveCompanyAdmins(companyId, membershipId);
+      if (remainingAdmins === 0) {
+        throw new BadRequestException(
+          "No puedes quitarle el rol de administrador al único administrador activo de la compañía."
+        );
+      }
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.companyMembership.update({
+        where: { id: membershipId },
+        data: { role: newRole }
+      });
+
+      await this.createAuditEvents(tx, [
+        {
+          actorUserId: principal.userId,
+          action: "COMPANY_MEMBERSHIP_ROLE_CHANGED",
+          targetType: "CompanyMembership",
+          targetId: membershipId,
+          groupId: company.groupId,
+          companyId,
+          metadata: {
+            email: membership.email,
+            previousRole: membership.role,
+            newRole
+          }
+        }
+      ]);
+
+      return updated;
+    });
+  }
+
   async listShifts(
     principal: AuthenticatedPrincipal,
     companyId: string,

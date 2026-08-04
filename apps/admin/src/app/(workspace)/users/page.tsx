@@ -19,6 +19,7 @@ import { SUPERVISOR_FORBIDDEN_MESSAGE, type CompanyAccessContext } from "../../.
 import {
   type UserInvitationRecord
 } from "../../../lib/user-invite-utils";
+import type { CompanyMemberRecord } from "../../../lib/company-member-utils";
 import { apiGet, loadWorkspaceContext, WorkspaceApiError } from "../../../lib/workspace-auth";
 
 export default async function UsersPage() {
@@ -27,7 +28,7 @@ export default async function UsersPage() {
 
     if (workspace.blocked) {
       return (
-        <AdminShell title="Roles & Access" description={EMPLOYEES_MODULE_DESCRIPTION}>
+        <AdminShell title="Roles y acceso" description={EMPLOYEES_MODULE_DESCRIPTION}>
           <EmployeesSectionNav />
           <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             {formatChooseCompanyBlockedCopy()}
@@ -45,7 +46,7 @@ export default async function UsersPage() {
 
     if (!accessContext.canManageCompany) {
       return (
-        <AdminShell title="Roles & Access" description={EMPLOYEES_MODULE_DESCRIPTION}>
+        <AdminShell title="Roles y acceso" description={EMPLOYEES_MODULE_DESCRIPTION}>
           <EmployeesSectionNav />
           <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             {SUPERVISOR_FORBIDDEN_MESSAGE}
@@ -59,7 +60,7 @@ export default async function UsersPage() {
       cookieHeader
     );
 
-    const [supervisors, supervisorAssignments, locations] = await Promise.all([
+    const [supervisors, supervisorAssignments, locations, members] = await Promise.all([
       apiGet<CompanySupervisorRecord[]>(
         `/company-operations/companies/${selectedCompany.id}/supervisors`,
         cookieHeader
@@ -71,18 +72,24 @@ export default async function UsersPage() {
       apiGet<LocationOption[]>(
         `/company-operations/companies/${selectedCompany.id}/locations?includeArchived=false`,
         cookieHeader
+      ),
+      apiGet<CompanyMemberRecord[]>(
+        `/company-operations/companies/${selectedCompany.id}/members`,
+        cookieHeader
       )
     ]);
 
     return (
-      <AdminShell title="Roles & Access" description={EMPLOYEES_MODULE_DESCRIPTION}>
+      <AdminShell title="Roles y acceso" description={EMPLOYEES_MODULE_DESCRIPTION}>
         <EmployeesSectionNav />
         <EmployeesModuleIntro>{ROLES_ACCESS_DESCRIPTION}</EmployeesModuleIntro>
         <div className="space-y-8">
           <UsersWorkspace
             company={selectedCompany}
             invitations={invitations}
+            members={members}
             signedInEmail={session.user.email}
+            signedInUserId={session.user.id}
           />
           <SupervisorLocationAccessSection
             companyId={selectedCompany.id}
@@ -99,10 +106,10 @@ export default async function UsersPage() {
     }
 
     return (
-      <AdminShell title="Roles & Access" description={EMPLOYEES_MODULE_DESCRIPTION}>
+      <AdminShell title="Roles y acceso" description={EMPLOYEES_MODULE_DESCRIPTION}>
         <EmployeesSectionNav />
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          Unable to load roles and access settings. Check that the API is running and try again.
+          No se pudo cargar la configuración de roles y acceso. Verifica que la API esté corriendo e intenta de nuevo.
         </p>
       </AdminShell>
     );
