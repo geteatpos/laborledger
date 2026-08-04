@@ -34,13 +34,13 @@ export type LocationOption = {
 };
 
 export const SUPERVISOR_ACCESS_HELPER_COPY =
-  "Supervisors can only see and manage records for assigned locations.";
+  "Los supervisores solo pueden ver y gestionar registros de las ubicaciones asignadas.";
 
 export const SUPERVISOR_PIN_HELPER_COPY =
-  "Employee PIN users are managed separately and are not assigned here.";
+  "Los usuarios con PIN de empleado se gestionan por separado y no se asignan aquí.";
 
 export const SUPERVISOR_ROLE_HELPER_COPY =
-  "Invite supervisors from Employees → Supervisors, then assign locations here after they accept the invitation.";
+  "Invita supervisores desde aquí mismo o desde Equipo → Supervisores, y asigna sus ubicaciones después de que acepten la invitación.";
 
 export function formatSupervisorLabel(supervisor: Pick<CompanySupervisorRecord, "fullName" | "email">) {
   return supervisor.fullName?.trim() || supervisor.email;
@@ -48,10 +48,10 @@ export function formatSupervisorLabel(supervisor: Pick<CompanySupervisorRecord, 
 
 export function formatAssignedLocationCount(count: number): string {
   if (count === 0) {
-    return "No locations assigned";
+    return "Sin ubicaciones asignadas";
   }
 
-  return `${count} assigned ${count === 1 ? "location" : "locations"}`;
+  return `${count} ${count === 1 ? "ubicación asignada" : "ubicaciones asignadas"}`;
 }
 
 export function groupAssignmentsBySupervisor(assignments: SupervisorLocationAssignmentRecord[]) {
@@ -81,38 +81,51 @@ export function buildRemoveSupervisorLocationPath(
   return `/api/company-operations/companies/${encodeURIComponent(companyId)}/supervisors/${encodeURIComponent(supervisorUserId)}/locations/${encodeURIComponent(locationId)}`;
 }
 
+export function buildBulkRemoveSupervisorLocationsPath(companyId: string, supervisorUserId: string): string {
+  return `/api/company-operations/companies/${encodeURIComponent(companyId)}/supervisors/${encodeURIComponent(supervisorUserId)}/locations/bulk-remove`;
+}
+
+export function buildBulkRemoveConfirmMessage(
+  supervisor: Pick<CompanySupervisorRecord, "fullName" | "email">,
+  count: number
+): string {
+  const label = formatSupervisorLabel(supervisor);
+  const countLabel = count === 1 ? "1 ubicación" : `${count} ubicaciones`;
+  return `¿Quitar ${countLabel} a ${label}? Esta acción no se puede deshacer.`;
+}
+
 export function supervisorAccessEmptyMessage(
   supervisors: CompanySupervisorRecord[],
   locations: LocationOption[]
 ): { title: string; description: string } {
   if (locations.length === 0) {
     return {
-      title: "No locations available",
-      description: "Create an active location before assigning supervisor access."
+      title: "No hay ubicaciones disponibles",
+      description: "Crea una ubicación activa antes de asignar acceso de supervisor."
     };
   }
 
   if (supervisors.length === 0) {
     return {
-      title: "No supervisors yet",
+      title: "Todavía no hay supervisores",
       description:
-        "Invite supervisors from Employees → Supervisors. Location assignments can be managed after they accept the invitation."
+        "Invita supervisores desde arriba. Las ubicaciones se pueden asignar después de que acepten la invitación."
     };
   }
 
   return {
-    title: "No location assignments yet",
-    description: "Assign one or more locations to each supervisor to scope their access."
+    title: "Todavía no hay ubicaciones asignadas",
+    description: "Asigna una o más ubicaciones a cada supervisor para delimitar su acceso."
   };
 }
 
 export function validateSupervisorAssignmentInput(supervisorUserId: string, locationId: string) {
   if (!supervisorUserId.trim()) {
-    return "Select a supervisor.";
+    return "Selecciona un supervisor.";
   }
 
   if (!locationId.trim()) {
-    return "Select a location.";
+    return "Selecciona una ubicación.";
   }
 
   return null;
