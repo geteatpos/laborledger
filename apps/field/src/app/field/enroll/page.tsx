@@ -108,20 +108,30 @@ export default function EnrollPage() {
   );
 }
 
+const FIELD_DEVICE_ID_STORAGE_KEY = "laborledger-field-device-id";
+
+/**
+ * Browsers have no access to a real Android ID (Settings.Secure.ANDROID_ID) or IMEI —
+ * those are native-OS APIs. Instead we mint a random UUID once per browser profile and
+ * persist it, so the same physical device keeps the same identity across enrollments
+ * instead of getting a new one on every browser/GPU-driver update (as a canvas-fingerprint
+ * hash would).
+ */
 async function getAndroidId(): Promise<string | null> {
-  if (typeof window !== "undefined" && "devicePixelRatio" in window) {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      const dataURL = canvas.toDataURL("image/png");
-      let hash = 0;
-      for (let i = 0; i < dataURL.length; i++) {
-        const char = dataURL.charCodeAt(i);
-        hash = (hash << 5) - hash + char;
-        hash = hash & hash;
-      }
-      return `web-${Math.abs(hash).toString(36)}`;
-    }
+  if (typeof window === "undefined" || !window.localStorage) {
+    return null;
   }
-  return null;
+
+  try {
+    const stored = window.localStorage.getItem(FIELD_DEVICE_ID_STORAGE_KEY);
+    if (stored) {
+      return stored;
+    }
+
+    const generated = `web-${crypto.randomUUID()}`;
+    window.localStorage.setItem(FIELD_DEVICE_ID_STORAGE_KEY, generated);
+    return generated;
+  } catch {
+    return null;
+  }
 }
