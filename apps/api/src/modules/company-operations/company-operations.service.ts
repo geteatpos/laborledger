@@ -4170,10 +4170,9 @@ export class CompanyOperationsService {
       0
     );
 
+    const activeAssignments = workOrder.assignments?.filter((assignment) => assignment.unassignedAt === null) ?? [];
     const activeWorkOrderAssignment =
-      workOrder.assignments?.find(
-        (assignment) => !assignment.workOrderServiceLineId && assignment.unassignedAt === null
-      ) ?? null;
+      activeAssignments.find((assignment) => !assignment.workOrderServiceLineId) ?? activeAssignments[0] ?? null;
 
     const lastResponsibilityConfirmation =
       workOrder.workerScanEvents?.find(
