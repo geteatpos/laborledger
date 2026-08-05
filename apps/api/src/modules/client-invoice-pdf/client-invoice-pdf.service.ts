@@ -214,15 +214,19 @@ export class ClientInvoicePdfService {
 
       const COLORS = {
         primary: "#2563EB",
+        primarySoft: "#EFF6FF",
         slate900: "#0F172A",
         slate700: "#334155",
         slate500: "#64748B",
         slate300: "#CBD5E1",
         slate200: "#E2E8F0",
         slate100: "#F1F5F9",
+        slate50: "#F8FAFC",
         white: "#FFFFFF",
         success: "#15803D",
-        error: "#B91C1C"
+        successSoft: "#F0FDF4",
+        error: "#B91C1C",
+        errorSoft: "#FEF2F2"
       };
 
       const left = 50;
@@ -244,7 +248,10 @@ export class ClientInvoicePdfService {
         width: number
       ) => {
         let cursor = startY;
-        doc.fontSize(8).fillColor(COLORS.slate500).text(title, x, cursor, { width, lineBreak: false });
+        doc
+          .fontSize(8)
+          .fillColor(COLORS.primary)
+          .text(title, x, cursor, { width, lineBreak: false, characterSpacing: 0.6 });
         cursor += 14;
         doc.fontSize(11).fillColor(COLORS.slate900).text(name, x, cursor, { width });
         cursor = doc.y + 4;
@@ -255,27 +262,47 @@ export class ClientInvoicePdfService {
         return cursor;
       };
 
+      const measureLabeledBlockHeight = (title: string, name: string, detailLines: string[], width: number) => {
+        let height = 14 + doc.fontSize(11).heightOfString(name, { width }) + 4;
+        for (const detail of detailLines) {
+          height += doc.fontSize(9).heightOfString(detail, { width }) + 2;
+        }
+        return height;
+      };
+
       doc.fillColor(COLORS.primary).rect(0, 0, 612, 8).fill();
 
-      let y = 28;
-      doc.fontSize(8).fillColor(COLORS.slate500).text("INVOICE", left, y, { width: 200, lineBreak: false });
-      y += 12;
+      let y = 32;
+      doc
+        .fontSize(8)
+        .fillColor(COLORS.slate500)
+        .text("INVOICE", left, y, { width: 200, lineBreak: false, characterSpacing: 1.2 });
+      y += 14;
 
       const invoiceLabel = formatPdfInvoiceNumberLabel(invoice.invoiceNumber, invoice.id);
-      doc.fontSize(22).fillColor(COLORS.slate900).text(invoiceLabel, left, y, { width: 360, lineBreak: false });
+      doc.fontSize(24).fillColor(COLORS.slate900).text(invoiceLabel, left, y, { width: 360, lineBreak: false });
 
-      const statusColor =
-        invoice.status === "ISSUED" ? COLORS.success : invoice.status === "VOID" ? COLORS.error : COLORS.slate500;
+      const statusPalette =
+        invoice.status === "ISSUED"
+          ? { fg: COLORS.success, bg: COLORS.successSoft }
+          : invoice.status === "VOID"
+            ? { fg: COLORS.error, bg: COLORS.errorSoft }
+            : { fg: COLORS.slate500, bg: COLORS.slate100 };
+      const statusText = formatPdfStatusLabel(invoice.status).toUpperCase();
+      const statusPillWidth = doc.fontSize(9).widthOfString(statusText, { characterSpacing: 0.4 }) + 20;
+      const statusPillX = left + pageWidth - statusPillWidth;
+      doc.fillColor(statusPalette.bg).roundedRect(statusPillX, y + 4, statusPillWidth, 20, 10).fill();
       doc
         .fontSize(9)
-        .fillColor(statusColor)
-        .text(formatPdfStatusLabel(invoice.status).toUpperCase(), left + pageWidth - 90, y + 6, {
-          width: 90,
-          align: "right",
-          lineBreak: false
+        .fillColor(statusPalette.fg)
+        .text(statusText, statusPillX, y + 10, {
+          width: statusPillWidth,
+          align: "center",
+          lineBreak: false,
+          characterSpacing: 0.4
         });
 
-      y += 36;
+      y += 44;
 
       const issuerLines = [
         ...formatCompanyAddressLines(renderCompanyProfile),
@@ -292,17 +319,30 @@ export class ClientInvoicePdfService {
           ]
         : [`Tax ID: ${this.snapshotString(invoice.billToSnapshot, "taxId") ?? "Not provided"}`];
 
+      const cardPadding = 14;
+      const cardInnerWidth = colWidth - cardPadding * 2;
+      const fromName = renderCompanyProfile.legalName?.trim() || renderCompanyProfile.name;
+      const cardHeight =
+        Math.max(
+          measureLabeledBlockHeight("FROM", fromName, issuerLines, cardInnerWidth),
+          measureLabeledBlockHeight("BILL TO", billToName, billToLines, cardInnerWidth)
+        ) +
+        cardPadding * 2;
+
       const partyTop = y;
-      const fromBottom = drawLabeledBlock(
-        "FROM",
-        renderCompanyProfile.legalName?.trim() || renderCompanyProfile.name,
-        issuerLines,
-        left,
-        partyTop,
-        colWidth
+      doc.fillColor(COLORS.slate50).roundedRect(left, partyTop, colWidth, cardHeight, 6).fill();
+      doc.fillColor(COLORS.slate50).roundedRect(rightColX, partyTop, colWidth, cardHeight, 6).fill();
+
+      drawLabeledBlock("FROM", fromName, issuerLines, left + cardPadding, partyTop + cardPadding, cardInnerWidth);
+      drawLabeledBlock(
+        "BILL TO",
+        billToName,
+        billToLines,
+        rightColX + cardPadding,
+        partyTop + cardPadding,
+        cardInnerWidth
       );
-      const billToBottom = drawLabeledBlock("BILL TO", billToName, billToLines, rightColX, partyTop, colWidth);
-      y = Math.max(fromBottom, billToBottom) + 16;
+      y = partyTop + cardHeight + 18;
 
       const metaItems: Array<{ label: string; value: string; accent?: string }> = [
         { label: "DATE", value: formatPdfDate(invoice.createdAt) },
@@ -318,16 +358,30 @@ export class ClientInvoicePdfService {
         });
       }
 
+      const metaCardHeight = 46;
+      doc.fillColor(COLORS.slate50).roundedRect(left, y, pageWidth, metaCardHeight, 6).fill();
+
       const metaWidth = pageWidth / metaItems.length;
       metaItems.forEach((item, index) => {
-        const x = left + metaWidth * index;
-        doc.fontSize(8).fillColor(COLORS.slate500).text(item.label, x, y, { width: metaWidth - 8, lineBreak: false });
+        const x = left + metaWidth * index + cardPadding;
+        if (index > 0) {
+          doc
+            .strokeColor(COLORS.slate200)
+            .lineWidth(0.5)
+            .moveTo(left + metaWidth * index, y + 10)
+            .lineTo(left + metaWidth * index, y + metaCardHeight - 10)
+            .stroke();
+        }
+        doc
+          .fontSize(8)
+          .fillColor(COLORS.slate500)
+          .text(item.label, x, y + 12, { width: metaWidth - cardPadding - 8, lineBreak: false, characterSpacing: 0.4 });
         doc
           .fontSize(10)
-          .fillColor(item.accent ?? COLORS.slate700)
-          .text(item.value, x, y + 12, { width: metaWidth - 8, lineBreak: false });
+          .fillColor(item.accent ?? COLORS.slate900)
+          .text(item.value, x, y + 24, { width: metaWidth - cardPadding - 8, lineBreak: false });
       });
-      y += 36;
+      y += metaCardHeight + 18;
 
       if (invoice.voidReason?.trim()) {
         doc.fontSize(9).fillColor(COLORS.error).text(`Void reason: ${invoice.voidReason.trim()}`, left, y, {
@@ -343,11 +397,11 @@ export class ClientInvoicePdfService {
       if (invoiceVehicle) {
         const vehicleDetails = formatPdfVehicleDetailLines(invoiceVehicle);
         const woLabel = invoiceVehicle.workOrderNumberSnapshot?.trim();
-        doc.fontSize(8).fillColor(COLORS.slate500).text("VEHICLE", left, y, {
-          width: pageWidth,
-          lineBreak: false
-        });
-        y += 12;
+        doc
+          .fontSize(8)
+          .fillColor(COLORS.primary)
+          .text("VEHICLE", left, y, { width: pageWidth, lineBreak: false, characterSpacing: 0.6 });
+        y += 14;
         if (woLabel) {
           doc.fontSize(9).fillColor(COLORS.slate500).text(`Work order: ${woLabel}`, left, y, {
             width: pageWidth,
@@ -355,11 +409,8 @@ export class ClientInvoicePdfService {
           });
           y += 12;
         }
-        for (const detail of vehicleDetails) {
-          doc.fontSize(10).fillColor(COLORS.slate900).text(detail, left, y, { width: pageWidth });
-          y = doc.y + 2;
-        }
-        y += 10;
+        doc.fontSize(10).fillColor(COLORS.slate900).text(vehicleDetails.join("  ·  "), left, y, { width: pageWidth });
+        y = doc.y + 10;
         drawDivider(y, COLORS.slate300);
         y += 10;
       }
@@ -370,23 +421,24 @@ export class ClientInvoicePdfService {
       const colAmountX = left + 445;
       const descriptionWidth = 240;
 
+      doc.fillColor(COLORS.slate100).rect(left, y - 6, pageWidth, 22).fill();
       doc.fontSize(8).fillColor(COLORS.slate500);
-      doc.text("DESCRIPTION", colDescriptionX, y, { width: descriptionWidth, lineBreak: false });
+      doc.text("DESCRIPTION", colDescriptionX + 8, y, { width: descriptionWidth - 8, lineBreak: false });
       doc.text("QTY", colQtyX, y, { width: 40, lineBreak: false });
       doc.text("UNIT PRICE", colUnitX, y, { width: 85, align: "right", lineBreak: false });
-      doc.text("AMOUNT", colAmountX, y, { width: 65, align: "right", lineBreak: false });
-      y += 14;
+      doc.text("AMOUNT", colAmountX, y, { width: 65 - 8, align: "right", lineBreak: false });
+      y += 16;
       drawDivider(y, COLORS.slate300);
       y += 10;
 
-      for (const line of invoice.lines) {
+      invoice.lines.forEach((line, rowIndex) => {
         const descriptionText = line.serviceNameSnapshot;
         const secondaryNote = line.description?.trim() || null;
 
         doc.fontSize(10);
-        let descriptionHeight = doc.heightOfString(descriptionText, { width: descriptionWidth });
+        let descriptionHeight = doc.heightOfString(descriptionText, { width: descriptionWidth - 8 });
         if (secondaryNote) {
-          descriptionHeight += 2 + doc.heightOfString(secondaryNote, { width: descriptionWidth });
+          descriptionHeight += 2 + doc.heightOfString(secondaryNote, { width: descriptionWidth - 8 });
         }
         const rowHeight = Math.max(descriptionHeight, 14) + 14;
 
@@ -397,13 +449,16 @@ export class ClientInvoicePdfService {
         }
 
         const rowTop = y;
-        doc.fontSize(10).fillColor(COLORS.slate900).text(descriptionText, colDescriptionX, rowTop, {
-          width: descriptionWidth
+        if (rowIndex % 2 === 1) {
+          doc.fillColor(COLORS.slate50).rect(left, rowTop - 6, pageWidth, rowHeight).fill();
+        }
+        doc.fontSize(10).fillColor(COLORS.slate900).text(descriptionText, colDescriptionX + 8, rowTop, {
+          width: descriptionWidth - 8
         });
         if (secondaryNote) {
-          const noteY = rowTop + doc.heightOfString(descriptionText, { width: descriptionWidth }) + 1;
-          doc.fontSize(8).fillColor(COLORS.slate500).text(secondaryNote, colDescriptionX, noteY, {
-            width: descriptionWidth
+          const noteY = rowTop + doc.heightOfString(descriptionText, { width: descriptionWidth - 8 }) + 1;
+          doc.fontSize(8).fillColor(COLORS.slate500).text(secondaryNote, colDescriptionX + 8, noteY, {
+            width: descriptionWidth - 8
           });
         }
         doc.fontSize(10).fillColor(COLORS.slate900).text(String(line.quantity), colQtyX, rowTop, {
@@ -429,7 +484,7 @@ export class ClientInvoicePdfService {
 
         y = rowTop + rowHeight;
         drawDivider(y - 6, COLORS.slate100);
-      }
+      });
 
       y += 12;
       if (y > 640) {
@@ -440,7 +495,7 @@ export class ClientInvoicePdfService {
 
       const totalsX = left + 320;
       const totalsW = 192;
-      doc.fillColor(COLORS.slate100).rect(totalsX - 8, y - 6, totalsW + 8, 108).fill();
+      doc.fillColor(COLORS.slate50).roundedRect(totalsX - 8, y - 6, totalsW + 8, 108, 6).fill();
 
       doc.fontSize(9).fillColor(COLORS.slate500).text("Subtotal", totalsX, y, { width: 90, lineBreak: false });
       doc
