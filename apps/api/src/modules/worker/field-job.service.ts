@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException
 } from "@nestjs/common";
-import { WorkOrderStatus, type Prisma } from "@prisma/client";
+import { Prisma, WorkOrderStatus } from "@prisma/client";
 
 import { GroupAccessService } from "../identity-access/group-access.service";
 import { PrismaService } from "../identity-access/prisma.service";
@@ -31,6 +31,39 @@ type FieldJobCreateInput = FieldJobAuthInput & {
   locationId: string;
   serviceCatalogItemId: string;
   notes?: string;
+};
+
+function toPrismaJsonValue(value: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull {
+  const serialized = JSON.stringify(value);
+  if (serialized === undefined) {
+    return Prisma.JsonNull;
+  }
+
+  return JSON.parse(serialized) as Prisma.InputJsonValue;
+}
+
+const JOB_HISTORY_DEFAULT_LIMIT = 20;
+const JOB_HISTORY_MAX_LIMIT = 50;
+
+const JOB_HISTORY_OPEN_STATUSES: WorkOrderStatus[] = [
+  WorkOrderStatus.DRAFT,
+  WorkOrderStatus.READY,
+  WorkOrderStatus.ASSIGNED,
+  WorkOrderStatus.IN_PROGRESS,
+  WorkOrderStatus.PENDING_MECHANIC_APPROVAL,
+  WorkOrderStatus.MECHANIC_REJECTED
+];
+
+const JOB_HISTORY_COMPLETED_STATUSES: WorkOrderStatus[] = [
+  WorkOrderStatus.COMPLETED,
+  WorkOrderStatus.INVOICED
+];
+
+type JobHistoryOptions = {
+  limit?: string;
+  cursor?: string;
+  status?: string;
+  q?: string;
 };
 
 @Injectable()
@@ -345,6 +378,96 @@ export class FieldJobService {
     };
   }
 
+  async listJobsHistory(input: FieldJobAuthInput & { locationId: string }, options: JobHistoryOptions) {
+    const companyId = input.companyId?.trim() ?? "";
+    if (!companyId) {
+      throw new BadRequestException("Company is required.");
+    }
+    const locationId = input.locationId?.trim() ?? "";
+    if (!locationId) {
+      throw new BadRequestException("Location is required.");
+    }
+
+    await this.requireOperationalCompany(companyId);
+    await resolveFieldEmployee(this.prisma, input);
+
+    const status = options.status?.trim() || "all";
+    if (status !== "open" && status !== "completed" && status !== "all") {
+      throw new BadRequestException("status must be open, completed, or all.");
+    }
+
+    const parsedLimit = Number.parseInt(options.limit ?? "", 10);
+    const take =
+      Number.isFinite(parsedLimit) && parsedLimit > 0
+        ? Math.min(parsedLimit, JOB_HISTORY_MAX_LIMIT)
+        : JOB_HISTORY_DEFAULT_LIMIT;
+
+    const cursor = options.cursor?.trim();
+    const q = options.q?.trim();
+
+    const where: Prisma.WorkOrderWhereInput = {
+      companyId,
+      locationId,
+      ...(status === "open" ? { status: { in: JOB_HISTORY_OPEN_STATUSES } } : {}),
+      ...(status === "completed" ? { status: { in: JOB_HISTORY_COMPLETED_STATUSES } } : {}),
+      ...(q
+        ? {
+            OR: [
+              { workOrderNumber: { contains: q, mode: "insensitive" } },
+              { vehicle: { vin: { contains: q, mode: "insensitive" } } }
+            ]
+          }
+        : {})
+    };
+
+    let workOrders;
+    try {
+      workOrders = await this.prisma.workOrder.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: take + 1,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        include: {
+          vehicle: { select: { vin: true, year: true, make: true, model: true } },
+          serviceClient: { select: { name: true } },
+          location: { select: { name: true } },
+          serviceLines: { select: { serviceNameSnapshot: true } },
+          assignments: {
+            orderBy: { assignedAt: "asc" },
+            take: 1,
+            select: { employeeId: true }
+          }
+        }
+      });
+    } catch {
+      throw new BadRequestException("Invalid cursor.");
+    }
+
+    const hasMore = workOrders.length > take;
+    const page = hasMore ? workOrders.slice(0, take) : workOrders;
+
+    return {
+      items: page.map((workOrder) => ({
+        workOrderId: workOrder.id,
+        workOrderNumber: workOrder.workOrderNumber,
+        vehicleId: workOrder.vehicleId,
+        vehicleVin: workOrder.vehicle.vin,
+        vehicleTitle:
+          [workOrder.vehicle.year, workOrder.vehicle.make, workOrder.vehicle.model]
+            .filter(Boolean)
+            .join(" ") || null,
+        serviceClientName: workOrder.serviceClient.name,
+        locationName: workOrder.location.name,
+        serviceNames: workOrder.serviceLines.map((line) => line.serviceNameSnapshot),
+        status: workOrder.status,
+        createdByEmployeeId: workOrder.assignments[0]?.employeeId ?? null,
+        createdAt: workOrder.createdAt,
+        completedAt: workOrder.finishedAt
+      })),
+      nextCursor: hasMore ? (page[page.length - 1]?.id ?? null) : null
+    };
+  }
+
   private async requireOperationalCompany(companyId: string) {
     const company = await this.prisma.company.findUnique({
       where: { id: companyId },
@@ -386,7 +509,7 @@ export class FieldJobService {
         fuelType: decode.fuelType,
         decodedAt: new Date(decode.decodedAt),
         decodeSource: decode.source,
-        decodePayload: decode.rawPayload
+        decodePayload: toPrismaJsonValue(decode.rawPayload)
       }
     });
   }

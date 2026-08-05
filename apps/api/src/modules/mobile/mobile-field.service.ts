@@ -132,6 +132,21 @@ export class MobileFieldService {
     };
   }
 
+  async jobsHistory(
+    session: MobileSessionContext,
+    options: { limit?: string; cursor?: string; status?: string; q?: string }
+  ) {
+    this.assertSessionScope(session);
+    return this.fieldJobs.listJobsHistory(
+      {
+        companyId: session.companyId,
+        employeeId: session.employeeId,
+        locationId: session.locationId
+      },
+      options
+    );
+  }
+
   async decodeVin(session: MobileSessionContext, vin: string) {
     this.assertSessionScope(session);
     if (!vin?.trim()) {
@@ -196,8 +211,7 @@ export class MobileFieldService {
     }
     return this.inspections.createWorkerChecklist({
       companyId: session.companyId,
-      workOrderId: id,
-      employeeId: session.employeeId
+      workOrderId: id
     });
   }
 
@@ -265,11 +279,11 @@ export class MobileFieldService {
       serviceClientId: input.serviceClientId ?? "",
       locationId: input.locationId ?? "",
       serviceCatalogItemId: input.serviceCatalogItemId ?? "",
-      vehicleId: input.vehicleId,
-      vin: input.vin,
-      notes: input.notes,
-      workOrderId: input.workOrderId,
-      workOrderServiceLineId: input.workOrderServiceLineId
+      ...(input.vehicleId ? { vehicleId: input.vehicleId } : {}),
+      ...(input.vin ? { vin: input.vin } : {}),
+      ...(input.notes ? { notes: input.notes } : {}),
+      ...(input.workOrderId ? { workOrderId: input.workOrderId } : {}),
+      ...(input.workOrderServiceLineId ? { workOrderServiceLineId: input.workOrderServiceLineId } : {})
     });
   }
 
