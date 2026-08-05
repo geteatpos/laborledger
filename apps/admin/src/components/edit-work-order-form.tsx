@@ -20,8 +20,6 @@ export function EditWorkOrderForm({ workOrder, onSaved }: EditWorkOrderFormProps
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isCancelled = workOrder.status === "CANCELLED";
-  const isCompleted = workOrder.status === "COMPLETED";
   const isInvoiced = workOrder.status === "INVOICED";
   const canMarkReady = workOrder.status === "DRAFT";
 
@@ -66,7 +64,7 @@ export function EditWorkOrderForm({ workOrder, onSaved }: EditWorkOrderFormProps
     router.refresh();
   }
 
-  if (isCancelled || isCompleted || isInvoiced) {
+  if (isInvoiced) {
     return null;
   }
 

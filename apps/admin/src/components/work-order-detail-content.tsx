@@ -127,7 +127,7 @@ export function WorkOrderDetailContent({
           <h3 className="text-[11px] font-medium uppercase tracking-[0.1em] text-slate-400">
             {WORK_ORDER_DETAIL_SERVICES_HEADING}
           </h3>
-          {canManageAssignments && !isClosed && catalogItems && catalogItems.length > 0 ? (
+          {canManageAssignments && !isInvoiced && catalogItems && catalogItems.length > 0 ? (
             <AddServiceLineForm
               workOrderId={workOrder.id}
               catalogItems={catalogItems}

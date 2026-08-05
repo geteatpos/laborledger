@@ -10,6 +10,8 @@ import {
   CompanyRole,
   ClientInvoiceStatus,
   MembershipStatus,
+  PaymentMethod,
+  PaymentStatus,
   Prisma,
   ShiftBatchType,
   ShiftStatus,
@@ -45,11 +47,21 @@ import {
   type ServiceClientWriteInput
 } from "./service-client-billing.validation";
 import { isLocationLinkedToServiceClient } from "./service-client-location-access";
+import { mapEmployeeResponse } from "./employee-response";
 
 const DEFAULT_EMPLOYEE_RATE_MINOR = 1900;
 const DEFAULT_CLIENT_RATE_MINOR = 2300;
 
 const PIN_PATTERN = /^\d{6}$/;
+
+function toPrismaJsonValue(value: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull {
+  const serialized = JSON.stringify(value);
+  if (serialized === undefined) {
+    return Prisma.JsonNull;
+  }
+
+  return JSON.parse(serialized) as Prisma.InputJsonValue;
+}
 
 type EffectiveRateInput = {
   rateMinorUnits: number;
@@ -158,7 +170,12 @@ type ListClientInvoicesOptions = {
   serviceClientId?: string;
   status?: ClientInvoiceStatus;
   q?: string;
+  take?: number;
+  skip?: number;
 };
+
+const DEFAULT_CLIENT_INVOICE_PAGE_SIZE = 50;
+const MAX_CLIENT_INVOICE_PAGE_SIZE = 200;
 
 type CreateClientInvoiceInput = {
   serviceClientId: string;
@@ -168,6 +185,18 @@ type CreateClientInvoiceInput = {
 };
 
 type VoidClientInvoiceInput = {
+  voidReason: string;
+};
+
+type CreateClientInvoicePaymentInput = {
+  method: PaymentMethod;
+  amountMinor: number;
+  paymentDate?: string;
+  reference?: string;
+  notes?: string;
+};
+
+type VoidClientInvoicePaymentInput = {
   voidReason: string;
 };
 
@@ -686,7 +715,7 @@ export class CompanyOperationsService {
           vin,
           plate,
           color,
-          mileage,
+          ...(mileage !== undefined ? { mileage } : {}),
           notes,
           year: decode.year,
           make: decode.make,
@@ -697,7 +726,7 @@ export class CompanyOperationsService {
           fuelType: decode.fuelType,
           decodedAt,
           decodeSource: decode.source,
-          decodePayload: decode.rawPayload
+          decodePayload: toPrismaJsonValue(decode.rawPayload)
         },
         include: this.vehicleInclude()
       });
@@ -718,6 +747,15 @@ export class CompanyOperationsService {
     });
   }
 
+  private vehicleSearchOr(search: string) {
+    return [
+      { vin: { contains: search, mode: "insensitive" as const } },
+      { plate: { contains: search, mode: "insensitive" as const } },
+      { make: { contains: search, mode: "insensitive" as const } },
+      { model: { contains: search, mode: "insensitive" as const } }
+    ];
+  }
+
   async listVehicles(
     principal: AuthenticatedPrincipal,
     companyId: string,
@@ -732,16 +770,7 @@ export class CompanyOperationsService {
         ...(options.includeArchived ? {} : { archivedAt: null }),
         ...(options.serviceClientId ? { serviceClientId: options.serviceClientId } : {}),
         ...(options.locationId ? { locationId: options.locationId } : {}),
-        ...(search
-          ? {
-              OR: [
-                { vin: { contains: search, mode: "insensitive" } },
-                { plate: { contains: search, mode: "insensitive" } },
-                { make: { contains: search, mode: "insensitive" } },
-                { model: { contains: search, mode: "insensitive" } }
-              ]
-            }
-          : {})
+        ...(search ? { OR: this.vehicleSearchOr(search) } : {})
       },
       include: this.vehicleInclude(),
       orderBy: [{ createdAt: "desc" }]
@@ -760,10 +789,8 @@ export class CompanyOperationsService {
       return [];
     }
 
-    const isActive = { archivedAt: null };
-
     const byVin = await this.prisma.vehicle.findFirst({
-      where: { companyId, ...isActive, vin: normalized },
+      where: { companyId, vin: normalized },
       include: {
         ...this.vehicleInclude(),
         workOrders: {
@@ -791,12 +818,8 @@ export class CompanyOperationsService {
     const vehicles = await this.prisma.vehicle.findMany({
       where: {
         companyId,
-        ...isActive,
         OR: [
-          { vin: { contains: search, mode: "insensitive" } },
-          { plate: { contains: search, mode: "insensitive" } },
-          { make: { contains: search, mode: "insensitive" } },
-          { model: { contains: search, mode: "insensitive" } },
+          ...this.vehicleSearchOr(search),
           { serviceClient: { name: { contains: search, mode: "insensitive" } } }
         ]
       },
@@ -869,7 +892,7 @@ export class CompanyOperationsService {
           locationId: location.id,
           plate,
           color,
-          mileage,
+          ...(mileage !== undefined ? { mileage } : {}),
           notes
         },
         include: this.vehicleInclude()
@@ -1104,14 +1127,6 @@ export class CompanyOperationsService {
 
     await this.companyScopeService.requireManagementCompany(principal, workOrder.companyId);
 
-    if (workOrder.status === WorkOrderStatus.CANCELLED) {
-      throw new BadRequestException("Cancelled work orders cannot be edited.");
-    }
-
-    if (workOrder.status === WorkOrderStatus.COMPLETED) {
-      throw new BadRequestException("Completed work orders cannot be edited.");
-    }
-
     if (workOrder.status === WorkOrderStatus.INVOICED) {
       throw new BadRequestException("Invoiced work orders cannot be edited.");
     }
@@ -1236,14 +1251,6 @@ export class CompanyOperationsService {
     input: { serviceCatalogItemIds: string[] }
   ) {
     const workOrder = await this.requireWorkOrderOperationalAccess(principal, workOrderId);
-
-    if (workOrder.status === WorkOrderStatus.CANCELLED) {
-      throw new BadRequestException("Cannot add services to a cancelled work order.");
-    }
-
-    if (workOrder.status === WorkOrderStatus.COMPLETED) {
-      throw new BadRequestException("Cannot add services to a completed work order.");
-    }
 
     if (workOrder.status === WorkOrderStatus.INVOICED) {
       throw new BadRequestException("Cannot add services to an invoiced work order.");
@@ -2100,7 +2107,7 @@ export class CompanyOperationsService {
 
     this.validatePin(input.pin);
 
-    return this.prisma.$transaction(async (tx) => {
+    const employee = await this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`
         SELECT pg_advisory_xact_lock(hashtext(${companyId}));
       `;
@@ -2174,18 +2181,31 @@ export class CompanyOperationsService {
 
       return employee;
     });
+
+    return mapEmployeeResponse(employee);
   }
 
   async listEmployees(principal: AuthenticatedPrincipal, companyId: string, options: ListOptions) {
     await this.companyScopeService.requireManagementCompany(principal, companyId);
 
-    return this.prisma.employee.findMany({
+    const employees = await this.prisma.employee.findMany({
       where: {
         companyId,
         ...(options.includeArchived ? {} : { archivedAt: null })
       },
       orderBy: { createdAt: "asc" }
     });
+
+    const activeBadges = await this.prisma.employeeBadgeCredential.findMany({
+      where: { companyId, revokedAt: null },
+      select: { employeeId: true }
+    });
+    const employeeIdsWithBadge = new Set(activeBadges.map((badge) => badge.employeeId));
+
+    return employees.map((employee) => ({
+      ...mapEmployeeResponse(employee),
+      hasActiveBadge: employeeIdsWithBadge.has(employee.id)
+    }));
   }
 
   async updateEmployee(
@@ -2223,7 +2243,7 @@ export class CompanyOperationsService {
         }
       ]);
 
-      return updated;
+      return mapEmployeeResponse(updated);
     });
   }
 
@@ -2234,7 +2254,7 @@ export class CompanyOperationsService {
     }
 
     await this.companyScopeService.requireManagementCompany(principal, employee.companyId);
-    return employee;
+    return mapEmployeeResponse(employee);
   }
 
   async getEmployeeProfile(
@@ -2259,7 +2279,7 @@ export class CompanyOperationsService {
       archivedAt: employee.archivedAt,
       createdAt: employee.createdAt,
       updatedAt: employee.updatedAt,
-      photoUrl: employee.photoUrl,
+      hasPhoto: Boolean(employee.photoUrl),
       photoUpdatedAt: employee.photoUpdatedAt,
       phone: employee.phone,
       email: employee.email,
@@ -2356,7 +2376,7 @@ export class CompanyOperationsService {
         }
       ]);
 
-      return updated;
+      return mapEmployeeResponse(updated);
     });
   }
 
@@ -2390,7 +2410,7 @@ export class CompanyOperationsService {
         }
       ]);
 
-      return updated;
+      return mapEmployeeResponse(updated);
     });
   }
 
@@ -2431,7 +2451,7 @@ export class CompanyOperationsService {
         }
       ]);
 
-      return updated;
+      return mapEmployeeResponse(updated);
     });
   }
 
@@ -2723,7 +2743,10 @@ export class CompanyOperationsService {
       city: true,
       stateRegion: true,
       postalCode: true,
-      country: true
+      country: true,
+      taxId: true,
+      logoUrl: true,
+      timezone: true
     } as const;
   }
 
@@ -2741,6 +2764,9 @@ export class CompanyOperationsService {
     stateRegion: string | null;
     postalCode: string | null;
     country: string | null;
+    taxId: string | null;
+    logoUrl: string | null;
+    timezone: string | null;
   }) {
     return {
       companyId: company.id,
@@ -2755,7 +2781,10 @@ export class CompanyOperationsService {
       city: company.city,
       stateRegion: company.stateRegion,
       postalCode: company.postalCode,
-      country: company.country
+      country: company.country,
+      taxId: company.taxId,
+      logoUrl: company.logoUrl,
+      timezone: company.timezone
     };
   }
 
@@ -3177,7 +3206,7 @@ export class CompanyOperationsService {
       throw new BadRequestException("to must be after from.");
     }
 
-    const locationScope = this.companyScopeService.buildLocationIdFilter(access, options.locationId);
+    const locationScope: Prisma.ShiftWhereInput = this.buildShiftLocationFilter(access, options.locationId);
 
     const statusFilter = options.includeCancelled
       ? { status: { in: [ShiftStatus.SCHEDULED, ShiftStatus.CANCELLED] } }
@@ -3203,6 +3232,21 @@ export class CompanyOperationsService {
       },
       orderBy: { scheduledStartUtc: "asc" }
     });
+  }
+
+  private buildShiftLocationFilter(
+    access: CompanyAccessContext,
+    locationId?: string
+  ): Prisma.ShiftWhereInput {
+    if (locationId) {
+      return { locationId };
+    }
+
+    if (access.unrestrictedLocations) {
+      return {};
+    }
+
+    return { locationId: { in: access.allowedLocationIds } };
   }
 
   async getShift(principal: AuthenticatedPrincipal, shiftId: string) {
@@ -3558,9 +3602,9 @@ export class CompanyOperationsService {
       companyId,
       sourceWeekStart,
       targetWeekStart,
-      locationId: input.locationId,
-      employeeId: input.employeeId,
-      serviceClientId: input.serviceClientId
+      ...(input.locationId ? { locationId: input.locationId } : {}),
+      ...(input.employeeId ? { employeeId: input.employeeId } : {}),
+      ...(input.serviceClientId ? { serviceClientId: input.serviceClientId } : {})
     });
 
     const existingBatch = await this.prisma.shiftGenerationBatch.findUnique({
@@ -4358,39 +4402,70 @@ export class CompanyOperationsService {
     await this.companyScopeService.requireManagementCompany(principal, companyId);
 
     const search = options.q?.trim();
-    const invoices = await this.prisma.clientInvoice.findMany({
-      where: {
-        companyId,
-        ...(options.serviceClientId ? { serviceClientId: options.serviceClientId } : {}),
-        ...(options.status ? { status: options.status } : {}),
-        ...(search
-          ? {
-              OR: [
-                { invoiceNumber: { contains: search, mode: "insensitive" } },
-                { serviceClient: { name: { contains: search, mode: "insensitive" } } },
-                {
-                  lines: {
-                    some: {
-                      OR: [
-                        { workOrderNumberSnapshot: { contains: search, mode: "insensitive" } },
-                        { vinSnapshot: { contains: search, mode: "insensitive" } },
-                        { serviceNameSnapshot: { contains: search, mode: "insensitive" } }
-                      ]
-                    }
+    const where: Prisma.ClientInvoiceWhereInput = {
+      companyId,
+      ...(options.serviceClientId ? { serviceClientId: options.serviceClientId } : {}),
+      ...(options.status ? { status: options.status } : {}),
+      ...(search
+        ? {
+            OR: [
+              { invoiceNumber: { contains: search, mode: "insensitive" } },
+              { serviceClient: { name: { contains: search, mode: "insensitive" } } },
+              {
+                lines: {
+                  some: {
+                    OR: [
+                      { workOrderNumberSnapshot: { contains: search, mode: "insensitive" } },
+                      { vinSnapshot: { contains: search, mode: "insensitive" } },
+                      { serviceNameSnapshot: { contains: search, mode: "insensitive" } }
+                    ]
                   }
                 }
-              ]
-            }
-          : {})
-      },
-      include: {
-        serviceClient: { select: { id: true, name: true } },
-        lines: { select: { workOrderId: true, vehicleId: true } }
-      },
-      orderBy: [{ createdAt: "desc" }]
-    });
+              }
+            ]
+          }
+        : {})
+    };
 
-    return invoices.map((invoice) => this.mapClientInvoiceSummary(invoice));
+    const take = Math.min(Math.max(options.take ?? DEFAULT_CLIENT_INVOICE_PAGE_SIZE, 1), MAX_CLIENT_INVOICE_PAGE_SIZE);
+    const skip = Math.max(options.skip ?? 0, 0);
+
+    const [invoices, statusGroups] = await Promise.all([
+      this.prisma.clientInvoice.findMany({
+        where,
+        include: {
+          serviceClient: { select: { id: true, name: true } },
+          lines: { select: { workOrderId: true, vehicleId: true } }
+        },
+        orderBy: [{ createdAt: "desc" }],
+        take,
+        skip
+      }),
+      this.prisma.clientInvoice.groupBy({
+        by: ["status"],
+        where,
+        _count: { _all: true },
+        _sum: { totalMinor: true }
+      })
+    ]);
+
+    const statusCounts: Record<ClientInvoiceStatus, number> = { DRAFT: 0, ISSUED: 0, VOID: 0 };
+    let issuedTotalMinor = 0;
+    let total = 0;
+    for (const group of statusGroups) {
+      statusCounts[group.status] = group._count._all;
+      total += group._count._all;
+      if (group.status === ClientInvoiceStatus.ISSUED) {
+        issuedTotalMinor = group._sum.totalMinor ?? 0;
+      }
+    }
+
+    return {
+      items: invoices.map((invoice) => this.mapClientInvoiceSummary(invoice)),
+      total,
+      statusCounts,
+      issuedTotalMinor
+    };
   }
 
   async getCompanyBillingSettings(principal: AuthenticatedPrincipal, companyId: string) {
@@ -4706,6 +4781,7 @@ export class CompanyOperationsService {
         ]);
 
         const mapped = this.mapClientInvoiceDetail(invoice);
+
         return {
           ...mapped,
           defaultVehicleId: vehicleSnapshot?.vehicleId ?? null
@@ -4766,6 +4842,8 @@ export class CompanyOperationsService {
           workOrder.notes?.trim() ||
           null;
 
+        const lineSubtotalMinor = line.quantity * line.unitPriceMinor;
+
         return {
           groupId: company.groupId,
           companyId,
@@ -4783,13 +4861,17 @@ export class CompanyOperationsService {
           description: workNotes,
           quantity: line.quantity,
           unitPriceMinor: line.unitPriceMinor,
+          lineSubtotalMinor,
+          taxable: false,
+          taxRate: 0,
+          taxAmountMinor: 0,
           lineTotalMinor: line.lineTotalMinor,
           currencyCode: line.currencyCode
         };
       })
     );
 
-    const subtotalMinor = linePayloads.reduce((sum, line) => sum + line.lineTotalMinor, 0);
+    const subtotalMinor = linePayloads.reduce((sum, line) => sum + line.lineSubtotalMinor, 0);
     const taxMinor = 0;
     const totalMinor = subtotalMinor + taxMinor;
     const currencyCode = linePayloads[0]?.currencyCode ?? company.currencyCode;
@@ -5356,6 +5438,202 @@ export class CompanyOperationsService {
     });
   }
 
+  async listClientInvoicePayments(principal: AuthenticatedPrincipal, clientInvoiceId: string) {
+    const invoice = await this.requireClientInvoiceAccess(principal, clientInvoiceId);
+
+    const payments = await this.prisma.clientInvoicePayment.findMany({
+      where: { clientInvoiceId: invoice.id },
+      include: this.clientInvoicePaymentInclude(),
+      orderBy: [{ createdAt: "desc" }]
+    });
+
+    return payments.map((payment) => this.mapClientInvoicePayment(payment));
+  }
+
+  async createClientInvoicePayment(
+    principal: AuthenticatedPrincipal,
+    clientInvoiceId: string,
+    input: CreateClientInvoicePaymentInput
+  ) {
+    const invoice = await this.requireClientInvoiceAccess(principal, clientInvoiceId);
+
+    if (invoice.status !== ClientInvoiceStatus.ISSUED) {
+      throw new BadRequestException("Only issued invoices can receive payments.");
+    }
+
+    const amountMinor = Math.trunc(input.amountMinor);
+    if (!Number.isFinite(amountMinor) || amountMinor <= 0) {
+      throw new BadRequestException("Payment amount must be greater than zero.");
+    }
+
+    if (amountMinor > invoice.balanceMinor) {
+      throw new BadRequestException("Payment amount exceeds the invoice balance.");
+    }
+
+    if (!Object.values(PaymentMethod).includes(input.method)) {
+      throw new BadRequestException("Invalid payment method.");
+    }
+
+    if (input.method === PaymentMethod.BANK_TRANSFER && !input.reference?.trim()) {
+      throw new BadRequestException("Reference is required for bank transfer payments.");
+    }
+
+    const paymentDate = input.paymentDate ? new Date(input.paymentDate) : new Date();
+    if (Number.isNaN(paymentDate.getTime())) {
+      throw new BadRequestException("Invalid payment date.");
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const payment = await tx.clientInvoicePayment.create({
+        data: {
+          groupId: invoice.groupId,
+          companyId: invoice.companyId,
+          clientInvoiceId: invoice.id,
+          amountMinor,
+          currencyCode: invoice.currencyCode,
+          paymentDate,
+          receivedAt: new Date(),
+          method: input.method,
+          status: PaymentStatus.POSTED,
+          reference: input.reference?.trim() || null,
+          notes: input.notes?.trim() || null,
+          recordedByUserId: principal.userId
+        },
+        include: this.clientInvoicePaymentInclude()
+      });
+
+      const amountPaidMinor = invoice.amountPaidMinor + amountMinor;
+      const balanceMinor = Math.max(invoice.totalMinor - amountPaidMinor, 0);
+
+      await tx.clientInvoice.update({
+        where: { id: invoice.id },
+        data: { amountPaidMinor, balanceMinor }
+      });
+
+      await this.createAuditEvents(tx, [
+        {
+          actorUserId: principal.userId,
+          action: "CLIENT_INVOICE_PAYMENT_RECORDED",
+          targetType: "ClientInvoice",
+          targetId: invoice.id,
+          groupId: invoice.groupId,
+          companyId: invoice.companyId,
+          metadata: { paymentId: payment.id, amountMinor, method: input.method }
+        }
+      ]);
+
+      return this.mapClientInvoicePayment(payment);
+    });
+  }
+
+  async voidClientInvoicePayment(
+    principal: AuthenticatedPrincipal,
+    clientInvoiceId: string,
+    paymentId: string,
+    input: VoidClientInvoicePaymentInput
+  ) {
+    const invoice = await this.requireClientInvoiceAccess(principal, clientInvoiceId);
+
+    const payment = await this.prisma.clientInvoicePayment.findUnique({
+      where: { id: paymentId }
+    });
+
+    if (!payment || payment.clientInvoiceId !== invoice.id) {
+      throw new NotFoundException("Payment not found.");
+    }
+
+    if (payment.status === PaymentStatus.VOIDED) {
+      throw new BadRequestException("Payment is already voided.");
+    }
+
+    const voidReason = input.voidReason?.trim() ?? "";
+    if (!voidReason) {
+      throw new BadRequestException("Void reason is required.");
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const voided = await tx.clientInvoicePayment.update({
+        where: { id: payment.id },
+        data: {
+          status: PaymentStatus.VOIDED,
+          voidedAt: new Date(),
+          voidedByUserId: principal.userId,
+          voidReason
+        },
+        include: this.clientInvoicePaymentInclude()
+      });
+
+      const amountPaidMinor = Math.max(invoice.amountPaidMinor - payment.amountMinor, 0);
+      const balanceMinor = Math.min(invoice.totalMinor - amountPaidMinor, invoice.totalMinor);
+
+      await tx.clientInvoice.update({
+        where: { id: invoice.id },
+        data: { amountPaidMinor, balanceMinor }
+      });
+
+      await this.createAuditEvents(tx, [
+        {
+          actorUserId: principal.userId,
+          action: "CLIENT_INVOICE_PAYMENT_VOIDED",
+          targetType: "ClientInvoice",
+          targetId: invoice.id,
+          groupId: invoice.groupId,
+          companyId: invoice.companyId,
+          metadata: { paymentId: payment.id, voidReason }
+        }
+      ]);
+
+      return this.mapClientInvoicePayment(voided);
+    });
+  }
+
+  private clientInvoicePaymentInclude() {
+    return {
+      recordedBy: { select: { id: true, fullName: true, email: true } },
+      voidedByUser: { select: { id: true, fullName: true, email: true } }
+    };
+  }
+
+  private mapClientInvoicePayment(payment: {
+    id: string;
+    clientInvoiceId: string;
+    amountMinor: number;
+    currencyCode: string;
+    paymentDate: Date;
+    receivedAt: Date;
+    method: PaymentMethod;
+    status: PaymentStatus;
+    reference: string | null;
+    notes: string | null;
+    externalPaymentId: string | null;
+    externalProvider: string | null;
+    voidedAt: Date | null;
+    voidReason: string | null;
+    createdAt: Date;
+    recordedBy: { id: string; fullName: string | null; email: string } | null;
+    voidedByUser: { id: string; fullName: string | null; email: string } | null;
+  }) {
+    return {
+      id: payment.id,
+      clientInvoiceId: payment.clientInvoiceId,
+      amountMinor: payment.amountMinor,
+      currencyCode: payment.currencyCode,
+      paymentDate: payment.paymentDate,
+      receivedAt: payment.receivedAt,
+      method: payment.method,
+      status: payment.status,
+      reference: payment.reference,
+      notes: payment.notes,
+      externalPaymentId: payment.externalPaymentId,
+      externalProvider: payment.externalProvider,
+      voidedAt: payment.voidedAt,
+      voidReason: payment.voidReason,
+      createdAt: payment.createdAt,
+      recordedByUser: payment.recordedBy,
+      voidedByUser: payment.voidedByUser
+    };
+  }
+
   private clientInvoiceInclude() {
     return {
       serviceClient: { select: this.serviceClientBillingSelect() },
@@ -5728,6 +6006,9 @@ export class CompanyOperationsService {
       stateRegion: string | null;
       postalCode: string | null;
       country: string | null;
+      taxId: string | null;
+      logoUrl: string | null;
+      timezone: string | null;
       currencyCode: string;
     }
   ) {
@@ -5751,7 +6032,10 @@ export class CompanyOperationsService {
         city: company.city,
         stateRegion: company.stateRegion,
         postalCode: company.postalCode,
-        country: company.country
+        country: company.country,
+        taxId: company.taxId,
+        logoUrl: company.logoUrl,
+        timezone: company.timezone
       },
       createdAt: settings.createdAt,
       updatedAt: settings.updatedAt
@@ -5786,6 +6070,7 @@ export class CompanyOperationsService {
     stateRegion: string | null;
     postalCode: string | null;
     country: string | null;
+    taxId: string | null;
   }, billingSettings: { paymentInstructions?: string | null } = {}): Prisma.InputJsonObject {
     return {
       companyId: company.id,
@@ -5800,7 +6085,7 @@ export class CompanyOperationsService {
       stateRegion: company.stateRegion,
       postalCode: company.postalCode,
       country: company.country,
-      taxId: null,
+      taxId: company.taxId,
       paymentInstructions: billingSettings.paymentInstructions ?? null
     };
   }

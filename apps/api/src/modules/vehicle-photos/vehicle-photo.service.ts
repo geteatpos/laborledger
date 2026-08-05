@@ -1,9 +1,11 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Inject,
   Injectable,
   NotFoundException
 } from "@nestjs/common";
+import { WorkOrderStatus } from "@prisma/client";
 import type {
   VehiclePhoto,
   VehiclePhotoAngle,
@@ -92,18 +94,24 @@ export class VehiclePhotoService {
     let workOrder: Pick<WorkOrder, "id" | "vehicleId" | "locationId"> | null =
       null;
     if (input.workOrderId) {
-      workOrder = await this.prisma.workOrder.findFirst({
+      const foundWorkOrder = await this.prisma.workOrder.findFirst({
         where: { id: input.workOrderId, companyId: input.companyId },
-        select: { id: true, vehicleId: true, locationId: true }
+        select: { id: true, vehicleId: true, locationId: true, status: true }
       });
 
-      if (!workOrder) {
+      if (!foundWorkOrder) {
         throw new NotFoundException("Work order not found.");
       }
 
-      if (workOrder.vehicleId !== input.vehicleId) {
+      if (foundWorkOrder.vehicleId !== input.vehicleId) {
         throw new NotFoundException("Work order does not belong to this vehicle.");
       }
+
+      if (foundWorkOrder.status === WorkOrderStatus.INVOICED) {
+        throw new BadRequestException("Invoiced work orders cannot be edited.");
+      }
+
+      workOrder = foundWorkOrder;
     }
 
     const { filePath, sizeBytes } = await this.storageService.saveFile({
@@ -290,7 +298,7 @@ export class VehiclePhotoService {
 
     const existing = await this.prisma.vehiclePhoto.findFirst({
       where: { id: input.photoId, companyId: input.companyId },
-      select: { id: true, deletedAt: true }
+      select: { id: true, deletedAt: true, workOrder: { select: { status: true } } }
     });
 
     if (!existing) {
@@ -301,6 +309,10 @@ export class VehiclePhotoService {
       return this.prisma.vehiclePhoto.findUniqueOrThrow({
         where: { id: existing.id }
       });
+    }
+
+    if (existing.workOrder?.status === WorkOrderStatus.INVOICED) {
+      throw new BadRequestException("Invoiced work orders cannot be edited.");
     }
 
     return this.prisma.vehiclePhoto.update({
