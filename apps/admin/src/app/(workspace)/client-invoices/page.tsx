@@ -4,7 +4,8 @@ import { AdminShell } from "../../../components/admin-shell";
 import { ClientInvoicesWorkspace } from "../../../components/client-invoices-workspace";
 import {
   buildClientInvoiceListQuery,
-  type ClientInvoiceListRecord,
+  CLIENT_INVOICE_PAGE_SIZE,
+  type ClientInvoiceListResponse,
   type ClientInvoiceStatus
 } from "../../../lib/client-invoice-utils";
 import {
@@ -29,6 +30,7 @@ type ClientInvoicesPageProps = {
     status?: string;
     q?: string;
     serviceClientId?: string;
+    page?: string;
   }>;
 };
 
@@ -44,6 +46,7 @@ export default async function ClientInvoicesPage({ searchParams }: ClientInvoice
   try {
     const query = (await searchParams) ?? {};
     const statusFilter = resolveStatusFilter(query.status);
+    const page = Math.max(Number.parseInt(query.page ?? "1", 10) || 1, 1);
     const workspace = await loadWorkspaceContext();
 
     if (workspace.blocked) {
@@ -64,11 +67,13 @@ export default async function ClientInvoicesPage({ searchParams }: ClientInvoice
     const listQuery = buildClientInvoiceListQuery({
       ...(query.serviceClientId ? { serviceClientId: query.serviceClientId } : {}),
       ...(statusFilter ? { status: statusFilter } : {}),
-      ...(query.q?.trim() ? { q: query.q.trim() } : {})
+      ...(query.q?.trim() ? { q: query.q.trim() } : {}),
+      page,
+      pageSize: CLIENT_INVOICE_PAGE_SIZE
     });
 
-    const [invoices, serviceClients, billingSettings] = await Promise.all([
-      apiGet<ClientInvoiceListRecord[]>(
+    const [invoiceList, serviceClients, billingSettings] = await Promise.all([
+      apiGet<ClientInvoiceListResponse>(
         `/company-operations/companies/${selectedCompany.id}/client-invoices${listQuery}`,
         cookieHeader
       ),
@@ -97,14 +102,19 @@ export default async function ClientInvoicesPage({ searchParams }: ClientInvoice
         description={CLIENT_INVOICES_MODULE_DESCRIPTION}
         actions={
           <span className="stitch-chip-inactive">
-            {invoices.length} {invoices.length === 1 ? "factura" : "facturas"}
+            {invoiceList.total} {invoiceList.total === 1 ? "factura" : "facturas"}
           </span>
         }
       >
         <ClientInvoicesWorkspace
           companies={companies}
           selectedCompany={selectedCompany}
-          invoices={invoices}
+          invoices={invoiceList.items ?? []}
+          total={invoiceList.total ?? 0}
+          statusCounts={invoiceList.statusCounts ?? { DRAFT: 0, ISSUED: 0, VOID: 0 }}
+          issuedTotalMinor={invoiceList.issuedTotalMinor ?? 0}
+          page={page}
+          pageSize={CLIENT_INVOICE_PAGE_SIZE}
           serviceClients={serviceClients}
           initialQuery={query.q ?? ""}
           initialStatus={statusFilter}
