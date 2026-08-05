@@ -4,13 +4,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
-import { employeeInitials } from "../lib/employee-utils";
+import { employeeInitials, employeePhotoApiPath } from "../lib/employee-utils";
 
 type EmployeePhotoUploadProps = {
   readonly employeeId: string;
   readonly companyId: string;
   readonly fullName: string;
-  readonly currentPhotoUrl: string | null;
+  readonly hasPhoto: boolean;
   readonly disabled?: boolean;
   readonly onPhotoChange?: () => void;
 };
@@ -22,14 +22,15 @@ export function EmployeePhotoUpload({
   employeeId,
   companyId,
   fullName,
-  currentPhotoUrl,
+  hasPhoto: initialHasPhoto,
   disabled = false,
   onPhotoChange
 }: EmployeePhotoUploadProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [hasPhoto, setHasPhoto] = useState(Boolean(currentPhotoUrl));
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [hasPhoto, setHasPhoto] = useState(initialHasPhoto);
   const [cacheBust, setCacheBust] = useState(() => Date.now());
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -40,14 +41,15 @@ export function EmployeePhotoUpload({
   const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
-    setHasPhoto(Boolean(currentPhotoUrl));
+    setHasPhoto(initialHasPhoto);
     setPreviewUrl(null);
     setCacheBust(Date.now());
-  }, [employeeId, currentPhotoUrl]);
+  }, [employeeId, initialHasPhoto]);
 
   const initials = employeeInitials(fullName);
+  const photoPath = employeePhotoApiPath(companyId, employeeId);
   const photoSrc = previewUrl ?? (hasPhoto
-    ? `/api/company-operations/companies/${companyId}/employees/${employeeId}/photo?t=${cacheBust}`
+    ? `${photoPath}?t=${cacheBust}`
     : null);
 
   function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
@@ -72,6 +74,8 @@ export function EmployeePhotoUpload({
       return;
     }
 
+    setSelectedFile(file);
+
     // Create preview
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -82,6 +86,7 @@ export function EmployeePhotoUpload({
 
   function handleCancelPreview() {
     setPreviewUrl(null);
+    setSelectedFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -89,7 +94,7 @@ export function EmployeePhotoUpload({
 
   async function handleUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const file = fileInputRef.current?.files?.[0];
+    const file = selectedFile;
     if (!file) {
       return;
     }
@@ -103,7 +108,7 @@ export function EmployeePhotoUpload({
 
     try {
       const response = await fetch(
-        `/api/company-operations/companies/${companyId}/employees/${employeeId}/photo`,
+        photoPath,
         {
           method: "POST",
           body: formData
@@ -126,6 +131,7 @@ export function EmployeePhotoUpload({
       setHasPhoto(true);
       setCacheBust(Date.now());
       setPreviewUrl(null);
+      setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -145,7 +151,7 @@ export function EmployeePhotoUpload({
 
     try {
       const response = await fetch(
-        `/api/company-operations/companies/${companyId}/employees/${employeeId}/photo`,
+        photoPath,
         {
           method: "DELETE"
         }
