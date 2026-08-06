@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 
 import { AuthenticatedGuard } from "../identity-access/authenticated.guard";
 import { CompanyScopeService } from "../identity-access/company-scope.service";
+import { EmployeePhotoModule } from "../employee-photo/employee-photo.module";
 import { GroupAccessService } from "../identity-access/group-access.service";
 import { PrismaService } from "../identity-access/prisma.service";
 import { MobileAdminAuthController, MobileAuthController } from "./mobile-auth.controller";
@@ -14,6 +15,7 @@ import { MobileRateLimitService } from "./mobile-rate-limit.service";
 import { MobileSessionService } from "./mobile-session.service";
 
 @Module({
+  imports: [EmployeePhotoModule],
   controllers: [MobileAuthController, MobileAdminAuthController, MobileDevicesController],
   providers: [
     PrismaService,

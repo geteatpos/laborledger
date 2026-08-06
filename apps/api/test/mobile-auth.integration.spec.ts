@@ -60,6 +60,50 @@ describe("mobile auth enrollment, login, me, and logout", () => {
     await request(httpServer).get("/mobile/auth/me").set("Authorization", `Bearer ${loginResponse.body.accessToken}`).expect(401);
   });
 
+  it("includes companyName, locationName, and a public photoUrl in /mobile/auth/me", async () => {
+    const previousPublicUrl = process.env.API_PUBLIC_URL;
+    process.env.API_PUBLIC_URL = "https://api.mariosautodetail.test";
+    try {
+      const fixture = await seedMobileFixture();
+      const adminCookie = await login(fixture.adminEmail, fixture.adminPassword);
+      const tokenResponse = await request(httpServer).post("/mobile/devices/enrollment-tokens").set("Cookie", adminCookie).send({ companyId: fixture.companyId, locationId: fixture.locationId }).expect(201);
+      const enrollResponse = await request(httpServer).post("/mobile/devices/enroll").send({ enrollmentToken: tokenResponse.body.enrollmentToken, androidId: "android-photo" }).expect(201);
+      await request(httpServer).post(`/mobile/admin/companies/${fixture.companyId}/employees/${fixture.employeeId}/badges/register`).set("Cookie", adminCookie).send({ locationId: fixture.locationId, badgeUid: "badge-photo", deviceId: enrollResponse.body.device.id }).expect(201);
+      const loginResponse = await request(httpServer).post("/mobile/auth/login").send({ deviceId: enrollResponse.body.device.id, badgeUid: "badge-photo", pin: fixture.pin }).expect(200);
+
+      const meBeforePhoto = await request(httpServer).get("/mobile/auth/me").set("Authorization", `Bearer ${loginResponse.body.accessToken}`).expect(200);
+      expect(meBeforePhoto.body.session.companyName).toBe(fixture.companyName);
+      expect(meBeforePhoto.body.session.locationName).toBe("Main");
+      expect(meBeforePhoto.body.employee.photoUrl).toBeNull();
+      expect(JSON.stringify(meBeforePhoto.body)).not.toContain("/var/lib/laborledger/uploads");
+
+      await request(httpServer)
+        .post(`/company-operations/companies/${fixture.companyId}/employees/${fixture.employeeId}/photo`)
+        .set("Cookie", adminCookie)
+        .attach("file", Buffer.from([0xff, 0xd8, 0xff, 0xd9]), { filename: "photo.jpg", contentType: "image/jpeg" })
+        .expect(201);
+
+      const meAfterPhoto = await request(httpServer).get("/mobile/auth/me").set("Authorization", `Bearer ${loginResponse.body.accessToken}`).expect(200);
+      const expectedPhotoUrl = `https://api.mariosautodetail.test/mobile/employees/${fixture.employeeId}/photo`;
+      expect(meAfterPhoto.body.employee.photoUrl).toBe(expectedPhotoUrl);
+
+      const photoResponse = await request(httpServer).get(`/mobile/employees/${fixture.employeeId}/photo`).expect(200);
+      expect(photoResponse.headers["content-type"]).toBe("image/jpeg");
+    } finally {
+      if (previousPublicUrl === undefined) {
+        delete process.env.API_PUBLIC_URL;
+      } else {
+        process.env.API_PUBLIC_URL = previousPublicUrl;
+      }
+    }
+  });
+
+  it("404s the public photo endpoint for an employee with no photo or unknown id", async () => {
+    const fixture = await seedMobileFixture();
+    await request(httpServer).get(`/mobile/employees/${fixture.employeeId}/photo`).expect(404);
+    await request(httpServer).get("/mobile/employees/does-not-exist/photo").expect(404);
+  });
+
   it("does not spend login failure budget on successful repeated PIN logins but locks after bad PINs", async () => {
     const fixture = await seedMobileFixture();
     const adminCookie = await login(fixture.adminEmail, fixture.adminPassword);
@@ -80,7 +124,8 @@ describe("mobile auth enrollment, login, me, and logout", () => {
 
   async function seedMobileFixture() {
     const group = await prisma.group.create({ data: { name: `Group ${randomBytes(3).toString("hex")}`, status: "ACTIVE" } });
-    const company = await prisma.company.create({ data: { groupId: group.id, name: `Company ${randomBytes(3).toString("hex")}` } });
+    const companyName = `Company ${randomBytes(3).toString("hex")}`;
+    const company = await prisma.company.create({ data: { groupId: group.id, name: companyName } });
     const client = await prisma.serviceClient.create({ data: { groupId: group.id, companyId: company.id, name: "Client" } });
     const location = await prisma.location.create({ data: { groupId: group.id, companyId: company.id, serviceClientId: client.id, name: "Main", timezone: "UTC" } });
     const employee = await prisma.employee.create({ data: { groupId: group.id, companyId: company.id, fullName: "Mobile Employee" } });
@@ -88,7 +133,7 @@ describe("mobile auth enrollment, login, me, and logout", () => {
     await prisma.companyMembership.create({ data: { companyId: company.id, userId: admin.id, email: admin.email, role: "COMPANY_ADMIN", status: "ACTIVE" } });
     const pin = "123456";
     await prisma.employeePinCredential.create({ data: { employeeId: employee.id, companyId: company.id, pinHash: await argon2.hash(pin), createdByUserId: admin.id } });
-    return { groupId: group.id, companyId: company.id, locationId: location.id, employeeId: employee.id, adminEmail: admin.email, adminPassword: "Admin!12345", pin };
+    return { groupId: group.id, companyId: company.id, companyName, locationId: location.id, employeeId: employee.id, adminEmail: admin.email, adminPassword: "Admin!12345", pin };
   }
 
   async function login(email: string, password: string) {
