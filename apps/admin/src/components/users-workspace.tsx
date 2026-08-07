@@ -5,26 +5,40 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 
 import type { AccessibleCompanyRecord } from "../lib/auth-utils";
+import { ActiveMembersSection } from "./active-members-section";
+import type { CompanyMemberRecord } from "../lib/company-member-utils";
 import {
   formatInvitedByLabel,
   formatInvitationRole,
   formatInvitationStatus,
   invitationStatusClassName,
+  INVITABLE_ROLES,
   USERS_PIN_HELPER_COPY,
   USERS_ACCESS_TYPES,
   validateInviteEmail,
+  type InvitableRole,
   type UserInvitationRecord
 } from "../lib/user-invite-utils";
 
 type UsersWorkspaceProps = {
   readonly company: AccessibleCompanyRecord;
   readonly invitations: UserInvitationRecord[];
+  readonly members: CompanyMemberRecord[];
   readonly signedInEmail?: string;
+  readonly signedInUserId?: string;
 };
 
-export function UsersWorkspace({ company, invitations, signedInEmail }: UsersWorkspaceProps) {
+export function UsersWorkspace({
+  company,
+  invitations,
+  members,
+  signedInEmail,
+  signedInUserId
+}: UsersWorkspaceProps) {
   const router = useRouter();
+  const [showInviteForm, setShowInviteForm] = useState(false);
   const [email, setEmail] = useState("");
+  const [role, setRole] = useState<InvitableRole>("COMPANY_ADMIN");
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -45,13 +59,15 @@ export function UsersWorkspace({ company, invitations, signedInEmail }: UsersWor
     setFieldError(null);
     setIsSubmitting(true);
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     const response = await fetch("/api/auth/invitations", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         companyId: company.id,
-        email: email.trim().toLowerCase(),
-        role: "COMPANY_ADMIN"
+        email: normalizedEmail,
+        role
       })
     });
 
@@ -60,12 +76,14 @@ export function UsersWorkspace({ company, invitations, signedInEmail }: UsersWor
     setIsSubmitting(false);
 
     if (!response.ok) {
-      setSubmitError(payload.message ?? "Unable to send invitation.");
+      setSubmitError(payload.message ?? "No se pudo enviar la invitación.");
       return;
     }
 
     setEmail("");
-    setSuccessMessage(`Invitation sent to ${email.trim().toLowerCase()}.`);
+    setRole("COMPANY_ADMIN");
+    setSuccessMessage(`Invitación enviada a ${normalizedEmail}.`);
+    setShowInviteForm(false);
     router.refresh();
   }
 
@@ -83,11 +101,11 @@ export function UsersWorkspace({ company, invitations, signedInEmail }: UsersWor
     setRevokingId(null);
 
     if (!response.ok) {
-      setSubmitError(payload.message ?? "Unable to revoke invitation.");
+      setSubmitError(payload.message ?? "No se pudo revocar la invitación.");
       return;
     }
 
-    setSuccessMessage("Invitation revoked.");
+    setSuccessMessage("Invitación revocada.");
     router.refresh();
   }
 
@@ -98,7 +116,7 @@ export function UsersWorkspace({ company, invitations, signedInEmail }: UsersWor
     <div className="space-y-8">
       {signedInEmail ? (
         <p className="text-sm text-slate-500">
-          Signed in as <span className="font-medium text-slate-700">{signedInEmail}</span>
+          Sesión iniciada como <span className="font-medium text-slate-700">{signedInEmail}</span>
         </p>
       ) : null}
 
@@ -129,68 +147,102 @@ export function UsersWorkspace({ company, invitations, signedInEmail }: UsersWor
       ) : null}
 
       <section
-        id="company-admins"
+        id="invite-user"
         className="scroll-mt-24 rounded-xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/30"
       >
-        <h2 className="text-sm font-semibold text-slate-900">Company admins</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Invite web users with full company management access for {company.name}.
-        </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900">Invitar usuario</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Invita administradores o supervisores con acceso web para {company.name}.
+            </p>
+          </div>
+          {!showInviteForm ? (
+            <button
+              type="button"
+              onClick={() => setShowInviteForm(true)}
+              className="inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+            >
+              Invitar usuario
+            </button>
+          ) : null}
+        </div>
 
-        <form className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end" onSubmit={handleInvite}>
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-slate-700" htmlFor="invite-email">
-              Email
-            </label>
-            <input
-              id="invite-email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-              placeholder="admin@company.com"
-              autoComplete="off"
+        {showInviteForm ? (
+          <form className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end" onSubmit={handleInvite}>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-slate-700" htmlFor="invite-email">
+                Correo
+              </label>
+              <input
+                id="invite-email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="mt-1.5 w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                placeholder="usuario@compania.com"
+                autoComplete="off"
+                disabled={isSubmitting}
+              />
+              {fieldError ? <p className="mt-1.5 text-sm text-red-600">{fieldError}</p> : null}
+            </div>
+
+            <div className="sm:w-56">
+              <label className="block text-sm font-medium text-slate-700" htmlFor="invite-role">
+                Rol
+              </label>
+              <select
+                id="invite-role"
+                value={role}
+                onChange={(event) => setRole(event.target.value as InvitableRole)}
+                className="mt-1.5 w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900"
+                disabled={isSubmitting}
+              >
+                {INVITABLE_ROLES.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="submit"
               disabled={isSubmitting}
-            />
-            {fieldError ? <p className="mt-1.5 text-sm text-red-600">{fieldError}</p> : null}
-          </div>
+              className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              {isSubmitting ? "Enviando…" : "Enviar invitación"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowInviteForm(false);
+                setFieldError(null);
+              }}
+              disabled={isSubmitting}
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Cancelar
+            </button>
+          </form>
+        ) : null}
 
-          <div className="sm:w-48">
-            <label className="block text-sm font-medium text-slate-700" htmlFor="invite-role">
-              Role
-            </label>
-            <input
-              id="invite-role"
-              type="text"
-              value="Company admin"
-              readOnly
-              className="mt-1.5 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-slate-700"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            {isSubmitting ? "Sending…" : "Send invitation"}
-          </button>
-        </form>
-
-        <p className="mt-3 text-xs text-slate-500">Invitations expire after 7 days.</p>
+        <p className="mt-3 text-xs text-slate-500">Las invitaciones expiran después de 7 días.</p>
       </section>
+
+      <ActiveMembersSection companyId={company.id} members={members} signedInUserId={signedInUserId} />
 
       <section id="pending-invites" className="scroll-mt-24 space-y-3">
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">Pending invites</h2>
+          <h2 className="text-sm font-semibold text-slate-900">Invitaciones pendientes</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Web user invitations awaiting acceptance, including company admins and supervisors.
+            Invitaciones de usuarios web en espera de aceptación, incluyendo administradores y supervisores.
           </p>
         </div>
 
         {pendingInvitations.length === 0 ? (
           <p className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-            No pending invitations for {company.name}.
+            No hay invitaciones pendientes para {company.name}.
           </p>
         ) : (
           <InvitationTable
@@ -204,7 +256,7 @@ export function UsersWorkspace({ company, invitations, signedInEmail }: UsersWor
 
       {historyInvitations.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-slate-900">Invitation history</h2>
+          <h2 className="text-sm font-semibold text-slate-900">Historial de invitaciones</h2>
           <InvitationTable invitations={historyInvitations} revokingId={revokingId} onRevoke={handleRevoke} />
         </section>
       ) : null}
@@ -225,14 +277,14 @@ function InvitationTable({ invitations, revokingId, onRevoke, showRevoke = false
       <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
         <thead className="bg-slate-50/80">
           <tr>
-            <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">Email</th>
-            <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">Role</th>
-            <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">Status</th>
-            <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">Expires</th>
-            <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">Invited by</th>
+            <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">Correo</th>
+            <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">Rol</th>
+            <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">Estado</th>
+            <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">Expira</th>
+            <th className="px-4 py-3 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">Invitado por</th>
             {showRevoke ? (
               <th className="px-4 py-3 text-right text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
-                Actions
+                Acciones
               </th>
             ) : null}
           </tr>
@@ -261,7 +313,7 @@ function InvitationTable({ invitations, revokingId, onRevoke, showRevoke = false
                     disabled={revokingId === invitation.id}
                     className="text-sm font-medium text-red-600 hover:text-red-700 disabled:text-slate-400"
                   >
-                    {revokingId === invitation.id ? "Revoking…" : "Revoke"}
+                    {revokingId === invitation.id ? "Revocando…" : "Revocar"}
                   </button>
                 </td>
               ) : null}

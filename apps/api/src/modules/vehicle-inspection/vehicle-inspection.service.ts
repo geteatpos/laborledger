@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Inject,
@@ -6,7 +7,7 @@ import {
   NotFoundException,
   UnprocessableEntityException
 } from "@nestjs/common";
-import { Prisma, type ChecklistItemStatus } from "@prisma/client";
+import { Prisma, WorkOrderStatus, type ChecklistItemStatus } from "@prisma/client";
 
 import { PrismaService } from "../identity-access/prisma.service";
 import { CompanyScopeService } from "../identity-access/company-scope.service";
@@ -72,12 +73,17 @@ export class VehicleInspectionService {
         id: true,
         groupId: true,
         companyId: true,
-        vehicleId: true
+        vehicleId: true,
+        status: true
       }
     });
 
     if (!workOrder) {
       throw new NotFoundException("Work order not found.");
+    }
+
+    if (workOrder.status === WorkOrderStatus.INVOICED) {
+      throw new BadRequestException("Invoiced work orders cannot be edited.");
     }
 
     const employee = await this.prisma.employee.findFirst({
@@ -150,7 +156,7 @@ export class VehicleInspectionService {
 
     const checklist = await this.prisma.vehicleInspectionChecklist.findFirst({
       where: { id: checklistId, companyId },
-      select: { id: true, status: true }
+      select: { id: true, status: true, workOrder: { select: { status: true } } }
     });
 
     if (!checklist) {
@@ -161,6 +167,10 @@ export class VehicleInspectionService {
       throw new UnprocessableEntityException(
         "Checklist is no longer in progress and cannot be edited."
       );
+    }
+
+    if (checklist.workOrder.status === WorkOrderStatus.INVOICED) {
+      throw new BadRequestException("Invoiced work orders cannot be edited.");
     }
 
     const item = await this.prisma.vehicleInspectionChecklistItem.findFirst({
@@ -206,7 +216,8 @@ export class VehicleInspectionService {
       include: {
         items: {
           orderBy: { positionOrder: "asc" }
-        }
+        },
+        workOrder: { select: { status: true } }
       }
     });
 
@@ -218,6 +229,10 @@ export class VehicleInspectionService {
       throw new UnprocessableEntityException(
         "Checklist is no longer in progress."
       );
+    }
+
+    if (checklist.workOrder.status === WorkOrderStatus.INVOICED) {
+      throw new BadRequestException("Invoiced work orders cannot be edited.");
     }
 
     const pending = checklist.items.filter((item) => item.status === "NA");

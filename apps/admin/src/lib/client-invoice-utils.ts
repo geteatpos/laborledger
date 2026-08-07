@@ -288,10 +288,21 @@ export function clientInvoicesEmptyMessage(hasAnyInvoices: boolean) {
   };
 }
 
+export type ClientInvoiceListResponse = {
+  items: ClientInvoiceListRecord[];
+  total: number;
+  statusCounts: Record<ClientInvoiceStatus, number>;
+  issuedTotalMinor: number;
+};
+
+export const CLIENT_INVOICE_PAGE_SIZE = 50;
+
 export function buildClientInvoiceListQuery(options: {
   serviceClientId?: string;
   status?: ClientInvoiceStatus;
   q?: string;
+  page?: number;
+  pageSize?: number;
 }) {
   const params = new URLSearchParams();
   if (options.serviceClientId) {
@@ -302,6 +313,12 @@ export function buildClientInvoiceListQuery(options: {
   }
   if (options.q?.trim()) {
     params.set("q", options.q.trim());
+  }
+  if (options.page && options.page > 1) {
+    params.set("page", String(options.page));
+  }
+  if (options.pageSize) {
+    params.set("pageSize", String(options.pageSize));
   }
 
   const query = params.toString();

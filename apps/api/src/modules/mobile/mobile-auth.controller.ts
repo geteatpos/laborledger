@@ -1,14 +1,19 @@
-import { Body, Controller, Get, HttpCode, Inject, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, Inject, Param, Post, Query, Res, UseGuards } from "@nestjs/common";
 
 import { AuthenticatedGuard } from "../identity-access/authenticated.guard";
 import { CurrentPrincipal } from "../identity-access/current-principal.decorator";
 import type { AuthenticatedPrincipal } from "../identity-access/auth.types";
+import { EmployeePhotoService } from "../employee-photo/employee-photo.service";
 import { CurrentMobileSession } from "./current-mobile-session.decorator";
 import { MobileAuthService } from "./mobile-auth.service";
 import type { ListBadgesQuery } from "./mobile-auth.dto";
 import { MobileBearerGuard } from "./mobile-bearer.guard";
 import type { MobileSessionContext } from "./mobile-contracts";
 import { optionalDateField, optionalIdField, optionalStringField, requireBodyObject, requireIdField, requireStringField } from "./mobile-validation";
+
+type ExpressLikeResponse = NodeJS.WritableStream & {
+  setHeader(name: string, value: string | number): void;
+};
 
 @Controller("mobile/auth")
 export class MobileAuthController {
@@ -42,7 +47,24 @@ export class MobileAuthController {
 
 @Controller("mobile")
 export class MobileAdminAuthController {
-  constructor(@Inject(MobileAuthService) private readonly mobileAuthService: MobileAuthService) {}
+  constructor(
+    @Inject(MobileAuthService) private readonly mobileAuthService: MobileAuthService,
+    @Inject(EmployeePhotoService) private readonly employeePhotoService: EmployeePhotoService
+  ) {}
+
+  // Unauthenticated by design: the mobile client renders this via a plain
+  // <img>/AsyncImage without an Authorization header. The employeeId cuid
+  // is the only credential; it is never guessable and grants read-only
+  // access to a single headshot image, nothing else.
+  @Get("employees/:employeeId/photo")
+  async getEmployeePublicPhoto(@Param("employeeId") employeeId: string, @Res() res: ExpressLikeResponse) {
+    const result = await this.employeePhotoService.getPublicPhotoStream(employeeId);
+    res.setHeader("Content-Type", result.mimeType);
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    const stream = await import("node:fs").then((m) => m.createReadStream(result.absolutePath));
+    stream.pipe(res);
+    return undefined;
+  }
 
   @Post("sessions/:sessionId/revoke")
   @UseGuards(AuthenticatedGuard)

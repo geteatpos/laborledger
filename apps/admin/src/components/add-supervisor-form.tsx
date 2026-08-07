@@ -37,7 +37,7 @@ export function AddSupervisorForm({
 
     const trimmedName = fullName.trim();
     if (!trimmedName) {
-      setFieldError("Name is required.");
+      setFieldError("El nombre es obligatorio.");
       return;
     }
 
@@ -67,13 +67,13 @@ export function AddSupervisorForm({
     setIsSubmitting(false);
 
     if (!response.ok) {
-      setSubmitError(payload.message ?? "Unable to send supervisor invitation.");
+      setSubmitError(payload.message ?? "No se pudo enviar la invitación al supervisor.");
       return;
     }
 
     setFullName("");
     setEmail("");
-    setSuccessMessage("Supervisor invited. Assign location access after they accept the invitation.");
+    setSuccessMessage("Supervisor invitado. Asigna el acceso por ubicación después de que acepte la invitación.");
     router.refresh();
   }
 
@@ -83,9 +83,9 @@ export function AddSupervisorForm({
     <div className="w-full max-w-2xl rounded-xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/30">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">Add supervisor</h2>
+          <h2 className="text-sm font-semibold text-slate-900">Agregar supervisor</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Send a web access invitation for {companyName}. Invitations expire after 7 days.
+            Envía una invitación de acceso web para {companyName}. Las invitaciones expiran después de 7 días.
           </p>
         </div>
         {onCancel ? (
@@ -94,7 +94,7 @@ export function AddSupervisorForm({
             onClick={onCancel}
             className="text-sm font-medium text-slate-500 hover:text-slate-700"
           >
-            Close
+            Cerrar
           </button>
         ) : null}
       </div>
@@ -102,12 +102,12 @@ export function AddSupervisorForm({
       <form className="mt-5 space-y-5" onSubmit={handleSubmit}>
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
-            Supervisor details
+            Datos del supervisor
           </p>
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-slate-700" htmlFor="supervisor-name">
-                Name
+                Nombre
               </label>
               <input
                 id="supervisor-name"
@@ -115,7 +115,7 @@ export function AddSupervisorForm({
                 value={fullName}
                 onChange={(event) => setFullName(event.target.value)}
                 className="mt-1.5 w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-                placeholder="Jane Supervisor"
+                placeholder="Ana Supervisora"
                 autoComplete="name"
                 disabled={isSubmitting}
               />
@@ -123,7 +123,7 @@ export function AddSupervisorForm({
 
             <div>
               <label className="block text-sm font-medium text-slate-700" htmlFor="supervisor-email">
-                Email
+                Correo
               </label>
               <input
                 id="supervisor-email"
@@ -131,7 +131,7 @@ export function AddSupervisorForm({
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 className="mt-1.5 w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-                placeholder="supervisor@company.com"
+                placeholder="supervisor@compania.com"
                 autoComplete="off"
                 disabled={isSubmitting}
               />
@@ -139,27 +139,21 @@ export function AddSupervisorForm({
           </div>
 
           <div className="mt-4 sm:max-w-xs">
-            <label className="block text-sm font-medium text-slate-700" htmlFor="supervisor-role">
-              Role
-            </label>
-            <input
-              id="supervisor-role"
-              type="text"
-              value="Supervisor"
-              readOnly
-              className="mt-1.5 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-slate-700"
-            />
+            <p className="block text-sm font-medium text-slate-700">Rol</p>
+            <p className="mt-1.5 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-700">
+              Supervisor
+            </p>
           </div>
 
           {fieldError ? <p className="mt-2 text-sm text-red-600">{fieldError}</p> : null}
         </div>
 
         <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5">
-          <p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-500">Location access</p>
+          <p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-500">Acceso por ubicación</p>
           <p className="mt-2 text-sm text-slate-600">{SUPERVISORS_LOCATION_HELP_COPY}</p>
           {locations.filter((location) => !location.archivedAt).length === 0 ? (
             <p className="mt-2 text-sm text-slate-500">
-              Create a location first, then assign access in Roles &amp; Access after the invite is accepted.
+              Crea una ubicación primero y luego asigna el acceso en Roles y acceso después de que se acepte la invitación.
             </p>
           ) : null}
         </div>
@@ -170,7 +164,7 @@ export function AddSupervisorForm({
             disabled={isSubmitting}
             className="inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            {isSubmitting ? "Sending invite…" : "Send invite"}
+            {isSubmitting ? "Enviando invitación…" : "Enviar invitación"}
           </button>
         </div>
       </form>
@@ -179,7 +173,7 @@ export function AddSupervisorForm({
         <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           <p>{successMessage}</p>
           <Link href={usersAccessHref} className="mt-2 inline-block font-medium text-emerald-900 underline">
-            Review location access
+            Revisar acceso por ubicación
           </Link>
         </div>
       ) : null}

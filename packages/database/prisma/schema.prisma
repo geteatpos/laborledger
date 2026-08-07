@@ -58,6 +58,7 @@ model Group {
   mobileEnrollmentTokens MobileEnrollmentToken[] @relation("MobileEnrollmentTokenGroup")
   mobileSessions     MobileSession[]         @relation("MobileSessionGroup")
   employeeBadgeCredentials EmployeeBadgeCredential[] @relation("EmployeeBadgeCredentialGroup")
+  employeeVerificationTokens EmployeeVerificationToken[] @relation("EmployeeVerificationTokenGroup")
   mobileAuthAuditEvents MobileAuthAuditEvent[] @relation("MobileAuthAuditEventGroup")
   mobileAuthRateLimits MobileAuthRateLimit[] @relation("MobileAuthRateLimitGroup")
 
@@ -81,6 +82,9 @@ model Company {
   stateRegion        String?
   postalCode         String?
   country            String?
+  taxId              String?
+  logoUrl            String?
+  timezone           String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   group        Group    @relation(fields: [groupId], references: [id], onDelete: Restrict)
@@ -126,6 +130,8 @@ model Company {
   mobileEnrollmentTokens MobileEnrollmentToken[] @relation("MobileEnrollmentTokenCompany")
   mobileSessions     MobileSession[]         @relation("MobileSessionCompany")
   employeeBadgeCredentials EmployeeBadgeCredential[] @relation("EmployeeBadgeCredentialCompany")
+  employeeVerificationTokens EmployeeVerificationToken[] @relation("EmployeeVerificationTokenCompany")
+  employeeVerificationScanEvents EmployeeVerificationScanEvent[] @relation("EmployeeVerificationScanEventCompany")
   mobileAuthAuditEvents MobileAuthAuditEvent[] @relation("MobileAuthAuditEventCompany")
   mobileAuthRateLimits MobileAuthRateLimit[] @relation("MobileAuthRateLimitCompany")
 
@@ -187,6 +193,8 @@ model User {
   revokedMobileSessions     MobileSession[]         @relation("MobileSessionRevokedBy")
   provisionedEmployeeBadges EmployeeBadgeCredential[] @relation("EmployeeBadgeProvisionedBy")
   revokedEmployeeBadges     EmployeeBadgeCredential[] @relation("EmployeeBadgeRevokedBy")
+  createdEmployeeVerificationTokens EmployeeVerificationToken[] @relation("EmployeeVerificationTokenCreatedBy")
+  revokedEmployeeVerificationTokens EmployeeVerificationToken[] @relation("EmployeeVerificationTokenRevokedBy")
   mobileAuthAuditEvents     MobileAuthAuditEvent[]  @relation("MobileAuthAuditEventActor")
 
   @@map("users")
@@ -475,6 +483,8 @@ model Employee {
   mobileSessions     MobileSession[]     @relation("MobileSessionEmployee")
   employeeBadgeCredentials EmployeeBadgeCredential[] @relation("EmployeeBadgeCredentialEmployee")
   mobileAuthAuditEvents MobileAuthAuditEvent[] @relation("MobileAuthAuditEventEmployee")
+  verificationTokens EmployeeVerificationToken[] @relation("EmployeeVerificationTokenEmployee")
+  verificationScanEvents EmployeeVerificationScanEvent[] @relation("EmployeeVerificationScanEventEmployee")
 
   @@index([groupId], map: "employees_group_id_idx")
   @@index([companyId], map: "employees_company_id_idx")
@@ -1841,6 +1851,13 @@ enum MobileAuthAuditOutcome {
   FAILURE
 }
 
+enum EmployeeVerificationScanOutcome {
+  VALID
+  INACTIVE
+  REVOKED
+  NOT_FOUND
+}
+
 enum MobileAuthRateLimitScope {
   DEVICE_ENROLLMENT
   LOGIN
@@ -2007,6 +2024,62 @@ model EmployeeBadgeCredential {
   @@index([lockedUntil], map: "employee_badge_credentials_locked_until_idx")
   @@unique([companyId, badgeUidHash], map: "employee_badge_credentials_company_id_badge_uid_hash_key")
   @@map("employee_badge_credentials")
+}
+
+// Public QR badge verification: a bearer token embedded in the printed badge's QR code.
+// The plaintext token is shown to the admin once (at generation/regeneration) and never stored;
+// only its HMAC hash + a short lookup prefix are persisted, following the mobile credential pattern.
+model EmployeeVerificationToken {
+  id              String    @id @default(cuid())
+  groupId         String
+  companyId       String
+  employeeId      String
+  tokenHash       String
+  tokenHashPrefix String
+  revokedAt       DateTime?
+  revokedByUserId String?
+  revocationReason String?
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+
+  group           Group     @relation("EmployeeVerificationTokenGroup", fields: [groupId], references: [id], onDelete: Restrict)
+  company         Company   @relation("EmployeeVerificationTokenCompany", fields: [companyId], references: [id], onDelete: Restrict)
+  employee        Employee  @relation("EmployeeVerificationTokenEmployee", fields: [employeeId], references: [id], onDelete: Restrict)
+  createdBy       User      @relation("EmployeeVerificationTokenCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  revokedBy       User?     @relation("EmployeeVerificationTokenRevokedBy", fields: [revokedByUserId], references: [id], onDelete: SetNull)
+  scanEvents      EmployeeVerificationScanEvent[]
+
+  @@index([groupId], map: "employee_verification_tokens_group_id_idx")
+  @@index([companyId], map: "employee_verification_tokens_company_id_idx")
+  @@index([employeeId], map: "employee_verification_tokens_employee_id_idx")
+  @@index([tokenHashPrefix], map: "employee_verification_tokens_token_hash_prefix_idx")
+  @@index([revokedAt], map: "employee_verification_tokens_revoked_at_idx")
+  @@unique([tokenHash], map: "employee_verification_tokens_token_hash_key")
+  @@map("employee_verification_tokens")
+}
+
+// One row per public scan of a /verify/:token page or photo, for the "últimas verificaciones" audit
+// trail shown on the employee profile. tokenId/employeeId are nullable because an invented token
+// (NOT_FOUND) has neither.
+model EmployeeVerificationScanEvent {
+  id         String                          @id @default(cuid())
+  tokenId    String?
+  employeeId String?
+  companyId  String?
+  outcome    EmployeeVerificationScanOutcome
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime                        @default(now())
+
+  token      EmployeeVerificationToken? @relation(fields: [tokenId], references: [id], onDelete: SetNull)
+  employee   Employee?                  @relation("EmployeeVerificationScanEventEmployee", fields: [employeeId], references: [id], onDelete: SetNull)
+  company    Company?                   @relation("EmployeeVerificationScanEventCompany", fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([tokenId], map: "employee_verification_scan_events_token_id_idx")
+  @@index([employeeId], map: "employee_verification_scan_events_employee_id_idx")
+  @@index([companyId], map: "employee_verification_scan_events_company_id_idx")
+  @@index([createdAt], map: "employee_verification_scan_events_created_at_idx")
+  @@map("employee_verification_scan_events")
 }
 
 model MobileAuthAuditEvent {

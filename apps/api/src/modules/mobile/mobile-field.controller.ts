@@ -120,6 +120,22 @@ export class MobileFieldController {
     return this.mobileField.jobOptions(session);
   }
 
+  @Get("jobs/history")
+  jobsHistory(
+    @CurrentMobileSession() session: MobileSessionContext,
+    @Query("limit") limit?: string,
+    @Query("cursor") cursor?: string,
+    @Query("status") status?: string,
+    @Query("q") q?: string
+  ) {
+    return this.mobileField.jobsHistory(session, {
+      ...(limit ? { limit } : {}),
+      ...(cursor ? { cursor } : {}),
+      ...(status ? { status } : {}),
+      ...(q ? { q } : {})
+    });
+  }
+
   @Post("jobs/decode-vin")
   @HttpCode(200)
   decodeVin(@CurrentMobileSession() session: MobileSessionContext, @Body() body: DecodeVinBody) {
@@ -243,8 +259,8 @@ export class MobileFieldController {
     @Query("category") category?: VehiclePhotoCategory
   ) {
     return this.mobileField.listPhotos(session, vehicleId, {
-      workOrderId: workOrderId?.trim() || undefined,
-      category
+      ...(workOrderId?.trim() ? { workOrderId: workOrderId.trim() } : {}),
+      ...(category ? { category } : {})
     });
   }
 
@@ -273,10 +289,10 @@ export class MobileFieldController {
         originalname: file.originalname,
         mimetype: file.mimetype
       },
-      workOrderId: body.workOrderId?.trim() || undefined,
-      category: body.category,
-      angle: body.angle,
-      caption: body.caption?.trim() || undefined
+      ...(body.workOrderId?.trim() ? { workOrderId: body.workOrderId.trim() } : {}),
+      ...(body.category ? { category: body.category } : {}),
+      ...(body.angle ? { angle: body.angle } : {}),
+      ...(body.caption?.trim() ? { caption: body.caption.trim() } : {})
     });
   }
 }

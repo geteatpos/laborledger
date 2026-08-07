@@ -17,23 +17,23 @@ export type UserInvitationRecord = {
 };
 
 export const USERS_PAGE_DESCRIPTION =
-  "Invite company admins, review pending invites, and manage supervisor location access.";
+  "Invita administradores y supervisores, revisa invitaciones pendientes y gestiona el acceso por ubicación de los supervisores.";
 
 export const USERS_PIN_HELPER_COPY =
-  "This page is for admin web access. Employees use Field PINs to access the Field app.";
+  "Esta página es para el acceso web administrativo. Los empleados usan PINs de campo para acceder a la app de campo.";
 
 export const USERS_ACCESS_TYPES = [
   {
-    title: "Company administrators",
-    description: "Web users invited above with full company management access."
+    title: "Administradores de la compañía",
+    description: "Usuarios web invitados arriba con acceso completo de administración de la compañía."
   },
   {
-    title: "Supervisors",
-    description: "Web users with supervisor membership. Location access is managed below."
+    title: "Supervisores",
+    description: "Usuarios web con membresía de supervisor. El acceso por ubicación se gestiona abajo."
   },
   {
-    title: "Employee PIN users",
-    description: "Field and worker employees managed on Employees. They do not sign in here."
+    title: "Usuarios con PIN de empleado",
+    description: "Empleados de campo y trabajadores gestionados en Equipo. No inician sesión aquí."
   }
 ] as const;
 
@@ -42,23 +42,23 @@ export const PASSWORD_RESET_REQUEST_MESSAGE =
 
 export function formatInvitationStatus(status: InvitationStatus): string {
   if (status === "PENDING") {
-    return "Pending";
+    return "Pendiente";
   }
 
   if (status === "ACCEPTED") {
-    return "Accepted";
+    return "Aceptada";
   }
 
   if (status === "REVOKED") {
-    return "Revoked";
+    return "Revocada";
   }
 
-  return "Expired";
+  return "Expirada";
 }
 
 export function formatInvitationRole(role: string): string {
   if (role === "COMPANY_ADMIN") {
-    return "Company admin";
+    return "Administrador de compañía";
   }
 
   if (role === "SUPERVISOR") {
@@ -98,15 +98,22 @@ export function validateInviteEmail(email: string): string | null {
   const normalized = email.trim().toLowerCase();
 
   if (!normalized) {
-    return "Email is required.";
+    return "El correo es obligatorio.";
   }
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(normalized)) {
-    return "Enter a valid email address.";
+    return "Ingresa un correo válido.";
   }
 
   return null;
 }
+
+export const INVITABLE_ROLES = [
+  { value: "COMPANY_ADMIN", label: "Administrador de compañía" },
+  { value: "SUPERVISOR", label: "Supervisor" }
+] as const;
+
+export type InvitableRole = (typeof INVITABLE_ROLES)[number]["value"];
 
 export function validateNewPassword(password: string): string | null {
   if (password.length < 8) {

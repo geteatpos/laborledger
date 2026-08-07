@@ -3,8 +3,8 @@ import { USERS_PAGE_DESCRIPTION } from "../../../lib/user-invite-utils";
 
 export default function UsersLoadingPage() {
   return (
-    <AdminShell title="Users & invites" description={USERS_PAGE_DESCRIPTION}>
-      <p className="text-sm text-slate-500">Loading invitations…</p>
+    <AdminShell title="Roles y acceso" description={USERS_PAGE_DESCRIPTION}>
+      <p className="text-sm text-slate-500">Cargando invitaciones…</p>
     </AdminShell>
   );
 }

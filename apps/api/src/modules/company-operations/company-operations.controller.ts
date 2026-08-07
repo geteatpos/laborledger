@@ -239,6 +239,14 @@ type AssignSupervisorBody = {
   supervisorUserId: string;
 };
 
+type BulkRemoveSupervisorLocationsBody = {
+  locationIds?: unknown;
+};
+
+type UpdateCompanyMembershipRoleBody = {
+  role: "COMPANY_ADMIN" | "SUPERVISOR";
+};
+
 type AssignSupervisorLocationBody = {
   locationId: string;
 };
@@ -1569,6 +1577,42 @@ export class CompanyOperationsController {
     return this.companyOperationsService.listCompanySupervisors(principal, companyId);
   }
 
+  @Get("companies/:companyId/members")
+  listCompanyMembers(
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+    @Param("companyId") companyId: string
+  ) {
+    return this.companyOperationsService.listCompanyMembers(principal, companyId);
+  }
+
+  @Patch("companies/:companyId/members/:membershipId")
+  updateCompanyMembershipRole(
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+    @Param("companyId") companyId: string,
+    @Param("membershipId") membershipId: string,
+    @Body() body: UpdateCompanyMembershipRoleBody
+  ) {
+    if (body.role !== "COMPANY_ADMIN" && body.role !== "SUPERVISOR") {
+      throw new BadRequestException("Role must be COMPANY_ADMIN or SUPERVISOR.");
+    }
+
+    return this.companyOperationsService.updateCompanyMembershipRole(
+      principal,
+      companyId,
+      membershipId,
+      body.role
+    );
+  }
+
+  @Post("companies/:companyId/members/:membershipId/revoke")
+  revokeCompanyMembership(
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+    @Param("companyId") companyId: string,
+    @Param("membershipId") membershipId: string
+  ) {
+    return this.companyOperationsService.revokeCompanyMembership(principal, companyId, membershipId);
+  }
+
   @Get("companies/:companyId/supervisor-location-assignments")
   listCompanySupervisorLocationAssignments(
     @CurrentPrincipal() principal: AuthenticatedPrincipal,
@@ -1607,6 +1651,25 @@ export class CompanyOperationsController {
       companyId,
       supervisorUserId,
       locationId
+    );
+  }
+
+  @Post("companies/:companyId/supervisors/:supervisorUserId/locations/bulk-remove")
+  bulkRemoveSupervisorFromCompanyLocations(
+    @CurrentPrincipal() principal: AuthenticatedPrincipal,
+    @Param("companyId") companyId: string,
+    @Param("supervisorUserId") supervisorUserId: string,
+    @Body() body: BulkRemoveSupervisorLocationsBody
+  ) {
+    const locationIds = Array.isArray(body.locationIds)
+      ? body.locationIds.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+      : [];
+
+    return this.companyOperationsService.bulkRemoveSupervisorFromCompanyLocations(
+      principal,
+      companyId,
+      supervisorUserId,
+      locationIds
     );
   }
 

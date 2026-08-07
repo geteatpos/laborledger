@@ -205,6 +205,33 @@ export class EmployeePhotoService {
     return { absolutePath, mimeType };
   }
 
+  async getPublicPhotoStream(
+    employeeId: string
+  ): Promise<{ absolutePath: string; mimeType: string }> {
+    const employee = await this.prisma.employee.findUnique({
+      where: { id: employeeId },
+      select: { photoUrl: true }
+    });
+
+    if (!employee || !employee.photoUrl) {
+      throw new NotFoundException("Employee photo not found.");
+    }
+
+    let absolutePath: string;
+    try {
+      absolutePath = await this.storageService.resolveAbsolutePath(
+        employee.photoUrl
+      );
+    } catch {
+      throw new NotFoundException("Employee photo file is missing.");
+    }
+
+    const ext = employee.photoUrl.toLowerCase().split(".").pop() ?? "";
+    const mimeType = this.getMimeTypeForExtension(ext);
+
+    return { absolutePath, mimeType };
+  }
+
   private getMimeTypeForExtension(ext: string): string {
     switch (ext) {
       case "jpg":

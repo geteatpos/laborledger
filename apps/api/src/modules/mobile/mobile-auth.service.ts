@@ -136,18 +136,33 @@ export class MobileAuthService {
   }
 
   async me(context: MobileSessionContext) {
-    const [employee, device] = await Promise.all([
+    const [employee, device, location, company] = await Promise.all([
       this.prisma.employee.findFirst({ where: { id: context.employeeId, companyId: context.companyId } }),
-      this.prisma.mobileDevice.findFirst({ where: { id: context.deviceId, companyId: context.companyId, locationId: context.locationId } })
+      this.prisma.mobileDevice.findFirst({ where: { id: context.deviceId, companyId: context.companyId, locationId: context.locationId } }),
+      this.prisma.location.findFirst({ where: { id: context.locationId, companyId: context.companyId } }),
+      this.prisma.company.findFirst({ where: { id: context.companyId } })
     ]);
     if (!employee || !device) {
       throw new UnauthorizedException("Mobile authentication required.");
     }
     return {
-      session: context,
-      employee: { id: employee.id, fullName: employee.fullName, companyId: employee.companyId },
+      session: { ...context, companyName: company?.name ?? null, locationName: location?.name ?? null },
+      employee: {
+        id: employee.id,
+        fullName: employee.fullName,
+        companyId: employee.companyId,
+        photoUrl: this.buildPublicPhotoUrl(employee.id, employee.photoUrl)
+      },
       device: this.deviceService.toSafeDevice(device)
     };
+  }
+
+  private buildPublicPhotoUrl(employeeId: string, storedPhotoPath: string | null): string | null {
+    const baseUrl = process.env["API_PUBLIC_URL"];
+    if (!storedPhotoPath || !baseUrl) {
+      return null;
+    }
+    return `${baseUrl.replace(/\/$/, "")}/mobile/employees/${employeeId}/photo`;
   }
 
   async logout(context: MobileSessionContext) {

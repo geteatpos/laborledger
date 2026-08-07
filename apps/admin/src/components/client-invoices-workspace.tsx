@@ -17,6 +17,7 @@ import {
   formatClientInvoiceMoney,
   formatClientInvoiceNumberLabel,
   type ClientInvoiceListRecord,
+  type ClientInvoiceStatus,
   type CompanyRecord,
   type ServiceClientRecord
 } from "../lib/client-invoice-utils";
@@ -25,6 +26,11 @@ type ClientInvoicesWorkspaceProps = {
   readonly companies: CompanyRecord[];
   readonly selectedCompany: CompanyRecord;
   readonly invoices: ClientInvoiceListRecord[];
+  readonly total: number;
+  readonly statusCounts: Record<ClientInvoiceStatus, number>;
+  readonly issuedTotalMinor: number;
+  readonly page: number;
+  readonly pageSize: number;
   readonly serviceClients: ServiceClientRecord[];
   readonly initialQuery: string;
   readonly initialStatus: string;
@@ -35,7 +41,12 @@ type ClientInvoicesWorkspaceProps = {
 export function ClientInvoicesWorkspace({
   companies,
   selectedCompany,
-  invoices,
+  invoices = [],
+  total,
+  statusCounts,
+  issuedTotalMinor,
+  page,
+  pageSize,
   serviceClients,
   initialQuery,
   initialStatus,
@@ -116,14 +127,14 @@ export function ClientInvoicesWorkspace({
     };
   }, [selectedInvoiceId, reloadToken]);
 
-  const emptyCopy = clientInvoicesEmptyMessage(invoices.length > 0);
-  const draftCount = invoices.filter((invoice) => invoice.status === "DRAFT").length;
-  const issuedCount = invoices.filter((invoice) => invoice.status === "ISSUED").length;
-  const voidCount = invoices.filter((invoice) => invoice.status === "VOID").length;
-  const issuedTotalMinor = invoices
-    .filter((invoice) => invoice.status === "ISSUED")
-    .reduce((sum, invoice) => sum + invoice.totalMinor, 0);
+  const emptyCopy = clientInvoicesEmptyMessage(total > 0);
+  const draftCount = statusCounts.DRAFT;
+  const issuedCount = statusCounts.ISSUED;
+  const voidCount = statusCounts.VOID;
   const currencyCode = invoices[0]?.currencyCode ?? "USD";
+  const pageCount = Math.max(Math.ceil(total / pageSize), 1);
+  const hasPrevPage = page > 1;
+  const hasNextPage = page < pageCount;
 
   function exportCsv() {
     const header = [
@@ -170,6 +181,7 @@ export function ClientInvoicesWorkspace({
     status?: string;
     q?: string;
     serviceClientId?: string;
+    page?: number;
   }) {
     const params = new URLSearchParams();
     params.set("companyId", overrides.companyId ?? selectedCompany.id);
@@ -187,6 +199,11 @@ export function ClientInvoicesWorkspace({
     const search = overrides.q ?? query;
     if (search.trim()) {
       params.set("q", search.trim());
+    }
+
+    const targetPage = overrides.page ?? 1;
+    if (targetPage > 1) {
+      params.set("page", String(targetPage));
     }
 
     return `/client-invoices?${params.toString()}`;
@@ -216,7 +233,7 @@ export function ClientInvoicesWorkspace({
 
       <MsKpiStrip
         items={[
-          { label: "Facturas", value: String(invoices.length), tone: "accent" },
+          { label: "Facturas", value: String(total), tone: "accent" },
           {
             label: "Borradores",
             value: String(draftCount),
@@ -372,6 +389,27 @@ export function ClientInvoicesWorkspace({
                 );
               })}
             </div>
+            {pageCount > 1 ? (
+              <div className="flex items-center justify-between gap-2 border-t border-outline-variant px-4 py-3">
+                <Link
+                  href={buildHref({ page: page - 1 })}
+                  aria-disabled={!hasPrevPage}
+                  className={`stitch-chip-inactive ${!hasPrevPage ? "pointer-events-none opacity-40" : ""}`}
+                >
+                  Anterior
+                </Link>
+                <span className="text-xs text-on-surface-variant">
+                  Página {page} de {pageCount}
+                </span>
+                <Link
+                  href={buildHref({ page: page + 1 })}
+                  aria-disabled={!hasNextPage}
+                  className={`stitch-chip-inactive ${!hasNextPage ? "pointer-events-none opacity-40" : ""}`}
+                >
+                  Siguiente
+                </Link>
+              </div>
+            ) : null}
           </aside>
 
           <section className="flex min-h-[420px] max-h-[78vh] flex-col bg-surface-container-low/40">

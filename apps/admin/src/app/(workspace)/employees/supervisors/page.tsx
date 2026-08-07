@@ -19,7 +19,7 @@ export default async function SupervisorsPage() {
 
     if (workspace.blocked) {
       return (
-        <AdminShell title="Supervisors" description={EMPLOYEES_MODULE_DESCRIPTION}>
+        <AdminShell title="Supervisores" description={EMPLOYEES_MODULE_DESCRIPTION}>
           <EmployeesSectionNav />
           <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             {formatChooseCompanyBlockedCopy()}
@@ -37,7 +37,7 @@ export default async function SupervisorsPage() {
 
     if (!accessContext.canManageCompany) {
       return (
-        <AdminShell title="Supervisors" description={EMPLOYEES_MODULE_DESCRIPTION}>
+        <AdminShell title="Supervisores" description={EMPLOYEES_MODULE_DESCRIPTION}>
           <EmployeesSectionNav />
           <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             {SUPERVISOR_FORBIDDEN_MESSAGE}
@@ -62,7 +62,7 @@ export default async function SupervisorsPage() {
     ]);
 
     return (
-      <AdminShell title="Supervisors" description={EMPLOYEES_MODULE_DESCRIPTION}>
+      <AdminShell title="Supervisores" description={EMPLOYEES_MODULE_DESCRIPTION}>
         <EmployeesSectionNav />
         <SupervisorsWorkspace
           companyId={selectedCompany.id}
@@ -79,10 +79,10 @@ export default async function SupervisorsPage() {
     }
 
     return (
-      <AdminShell title="Supervisors" description={EMPLOYEES_MODULE_DESCRIPTION}>
+      <AdminShell title="Supervisores" description={EMPLOYEES_MODULE_DESCRIPTION}>
         <EmployeesSectionNav />
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          Unable to load supervisors. Check that the API is running and try again.
+          No se pudieron cargar los supervisores. Verifica que la API esté corriendo e intenta de nuevo.
         </p>
       </AdminShell>
     );
