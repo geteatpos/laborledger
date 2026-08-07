@@ -436,7 +436,8 @@ export class FieldJobService {
             orderBy: { assignedAt: "asc" },
             take: 1,
             select: { employeeId: true }
-          }
+          },
+          inspectionChecklist: { select: { id: true } }
         }
       });
     } catch {
@@ -462,7 +463,8 @@ export class FieldJobService {
         status: workOrder.status,
         createdByEmployeeId: workOrder.assignments[0]?.employeeId ?? null,
         createdAt: workOrder.createdAt,
-        completedAt: workOrder.finishedAt
+        completedAt: workOrder.finishedAt,
+        checklistId: workOrder.inspectionChecklist?.id ?? null
       })),
       nextCursor: hasMore ? (page[page.length - 1]?.id ?? null) : null
     };
